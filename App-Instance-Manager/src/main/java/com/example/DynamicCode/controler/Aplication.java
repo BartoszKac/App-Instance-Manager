@@ -9,44 +9,50 @@ import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/app")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "http://localhost:5173") // Dopasuj do swojego frontu
 public class Aplication {
 
     @Autowired
-    AplicationService aplicationService;
-
-
+    private AplicationService aplicationService;
 
     @PostMapping("/test")
     public String debugIndex(@RequestBody String rawJson) {
         System.out.println("--- OTRZYMANY JSON ---");
         System.out.println(rawJson);
         System.out.println("----------------------");
-
-        // Na razie zwracamy info, żeby nie wywaliło frontu
-        return "Odebrano: " + rawJson;
+        return "Odebrano surowy JSON";
     }
+
     @PostMapping("/")
-        public String index(@RequestBody ArrayList<CodeRequest> code) {
-        System.out.println("Received code: " + code.toString());
+    public String index(@RequestBody ArrayList<CodeRequest> code) {
+        if (code == null || code.isEmpty()) return "Błąd: Brak kodu w żądaniu.";
+
         aplicationService.SavaCode(code);
-        return code.get(0) + " saved successfully!";
+        // Zwracamy nazwę pierwszego pliku i informację o sukcesie
+        return code.get(0).getName() + code.get(0).getExtension() + " saved successfully!";
     }
-        @GetMapping("/info")
-        public String GetInfo(){
-       return aplicationService.GetInfo();
-        }
 
-        @GetMapping("/compile/{name}")
-        public String Compile(@PathVariable String name){
-             aplicationService.CompileandRun(name);
-            return "Kompilacja i uruchomienie rozpoczęte dla: " + name;
-        }
+ @GetMapping("/info")
+    public String GetInfo() {
+        return aplicationService.GetInfo();
+    }
+
+    /**
+     * Zaktualizowana metoda kompilacji.
+     * Przyjmuje rozszerzenie jako parametr zapytania, np. /compile/HelloWorld?ext=.py
+     */
+    @GetMapping("/compile/{name}")
+    public String Compile(@PathVariable String name, @RequestParam(defaultValue = ".java") String ext) {
+        aplicationService.CompileandRun(name, ext);
+        return "Kompilacja i uruchomienie rozpoczęte dla: " + name + ext;
+    }
+
+    /**
+     * Zaktualizowana metoda usuwania.
+     * Przyjmuje rozszerzenie jako parametr zapytania, np. /delete/HelloWorld?ext=.cpp
+     */
     @GetMapping("/delete/{name}")
-    public String delete(@PathVariable String name){
-        aplicationService.Delete(name);
-        return "Kompilacja i uruchomienie rozpoczęte dla: " + name;
+    public String delete(@PathVariable String name, @RequestParam(defaultValue = ".java") String ext) {
+        return aplicationService.Delete(name, ext);
     }
-
-
 }

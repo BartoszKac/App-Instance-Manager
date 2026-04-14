@@ -6,8 +6,13 @@ import { Terminal } from './components/Terminal';
 import './App.css';
 
 function App() {
+  // 1. ZMIANA: Dodajemy pole extension do obiektów plików
   const [openFiles, setOpenFiles] = useState([
-    { name: 'Main', code: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("No i działa!");\n    }\n}' }
+    { 
+      name: 'Main', 
+      code: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("No i działa!");\n    }\n}',
+      extension: '.java' // Domyślnie Java
+    }
   ]);
   const [activeFileIndex, setActiveFileIndex] = useState(0);
 
@@ -35,8 +40,19 @@ function App() {
     setOpenFiles(updated);
   };
 
+  // 2. NOWA FUNKCJA: Zmiana rozszerzenia dla aktywnego pliku
+  const handleExtensionChange = (newExt) => {
+    const updated = [...openFiles];
+    updated[activeFileIndex].extension = newExt;
+    setOpenFiles(updated);
+  };
+
   const handleNewFile = () => {
-    const newFile = { name: `Klasa${openFiles.length + 1}`, code: 'public class Nazwa {\n    \n}' };
+    const newFile = { 
+      name: `Klasa${openFiles.length + 1}`, 
+      code: '', 
+      extension: '.java' 
+    };
     setOpenFiles([...openFiles, newFile]);
     setActiveFileIndex(openFiles.length);
     addLog("> Dodano nową zakładkę.");
@@ -65,7 +81,8 @@ function App() {
                   transition: '0.2s'
                 }}
               >
-                {file.name || 'bez_nazwy'}.java
+                {/* 3. ZMIANA: Wyświetlamy dynamiczne rozszerzenie */}
+                {file.name || 'bez_nazwy'}{file.extension}
                 {idx === 0 && <span style={{ marginLeft: '5px', color: '#10b981', fontSize: '10px' }}>★</span>}
               </button>
               
@@ -94,11 +111,14 @@ function App() {
           </button>
         </div>
 
+        {/* 4. ZMIANA: Przekazujemy extension i handler zmiany do edytora */}
         <CodeEditor 
           fileName={activeFile.name} 
           setFileName={handleNameChange}
           javaCode={activeFile.code} 
           setJavaCode={handleCodeChange}
+          extension={activeFile.extension}
+          setExtension={handleExtensionChange}
           isSending={isSending}
           onSave={() => saveFiles(openFiles)}
         />
@@ -109,6 +129,8 @@ function App() {
           files={serverFiles}
           isCompiling={isCompiling}
           onRefresh={loadFiles}
+          // 5. ZMIANA: Upewnij się, że Twoje hooki (deleteFile, compileFile) 
+          // przyjmują teraz (name, extension) jeśli to zaktualizowałeś.
           onDelete={deleteFile}
           onCompile={compileFile}
         />

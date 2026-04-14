@@ -1,180 +1,165 @@
 package com.example.DynamicCode.service;
 
-import com.example.DynamicCode.model.ProcesDefault;
-import com.example.DynamicCode.service.util.FilesSave;
 import com.example.DynamicCode.model.CodeRequest;
+import com.example.DynamicCode.model.ProcesDefault;
+import com.example.DynamicCode.service.language.LanguageHandler;
+import com.example.DynamicCode.service.util.FilesSave;
 import com.example.DynamicCode.service.util.ProcessMenager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
 
 @Service
 public class AplicationService {
 
-    @Autowired
-    FilesSave files;
+    @Autowired private FilesSave files;
+    @Autowired private SimpMessagingTemplate messagingTemplate;
+    @Autowired private ProcessMenager processMenager;
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
-
-    // Wstrzykujemy manager procesów
-    @Autowired
-    private ProcessMenager processMenager;
-
+    private final Map<String, LanguageHandler> handlers = new HashMap<>();
     private final String workingDir = System.getProperty("user.dir") + File.separator + "app";
-
     private Process currentRunningProcess = null;
+
+    @Autowired
+    public AplicationService(List<LanguageHandler> handlerList) {
+        for (LanguageHandler handler : handlerList) {
+            handlers.put(handler.getExtension(), handler);
+        }
+    }
+
+
+    public String GetInfo() {
+        try {
+            File folder = new File(workingDir);
+
+            if (!folder.exists()) {
+                return "[]";
+            }
+
+            File[] listOfFiles = folder.listFiles();
+            if (listOfFiles == null) return "[]";
+
+            List<String> fileNames = new ArrayList<>();
+            for (File file : listOfFiles) {
+                if (file.isFile()) {
+                    fileNames.add(file.getName());
+                }
+            }
+
+
+            return fileNames.toString();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "[]";
+        }
+    }
 
     public int SavaCode(ArrayList<CodeRequest> codes) {
         if (codes == null || codes.isEmpty()) return -1;
 
-        // Tworzymy nową strukturę procesu dla managera
-        // Zakładamy, że pierwszy plik na liście to główny proces (main)
         String mainClassName = codes.get(0).getName();
+        String ext = codes.get(0).getExtension(); // Upewnij się, że CodeRequest ma to pole!
         ArrayList<String> allRelatedFiles = new ArrayList<>();
 
-        codes.forEach(codeRequest -> {
-            String fileName = codeRequest.getName() + ".java";
-            allRelatedFiles.add(fileName);
-            Path path = Paths.get(workingDir, fileName);
-
-            try {
-                // Usuwamy stary plik jeśli istnieje
-                Files.deleteIfExists(path);
-                // Zapisujemy nowy kod
-                Files.write(path, codeRequest.getCode().getBytes());
-            } catch (IOException e) {
-                e.printStackTrace();
+        try {
+            Files.createDirectories(Paths.get(workingDir));
+            for (CodeRequest req : codes) {
+                String fileName = req.getName() + req.getExtension();
+                allRelatedFiles.add(fileName);
+                Files.write(Paths.get(workingDir, fileName), req.getCode().getBytes());
             }
-        });
-
-        // Rejestrujemy proces w managerze
-        // Używamy refleksji/dostępności do klasy wewnętrznej (uważaj na widoczność klasy ProcesDefault)
-        // Jeśli ProcesDefault nie jest publiczny, przenieś go do osobnego pliku lub zmień na public
-        ProcesDefault newProcess = new ProcesDefault(allRelatedFiles, mainClassName);
-        processMenager.addProcesDefault(newProcess);
-
-        if(Files.exists(Paths.get(workingDir, mainClassName + ".java"))) {
-            files.writeString(mainClassName);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return -1;
         }
+
+        processMenager.addProcesDefault(new ProcesDefault(allRelatedFiles, mainClassName));
+        files.writeString(mainClassName);
         return 0;
     }
 
-    public String GetInfo() {
-        return files.toString();
-    }
-
-    public String Delete(String name) {
-        processMenager.getProcesDefaultByMainProcess(name).getProcesses().forEach(file -> {
-            try {
-                Files.deleteIfExists(Paths.get(workingDir, file));
-                Files.deleteIfExists(Paths.get(workingDir, file.replace(".java", ".class")));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-        files.deleteString(name);
-        String fileName = name + ".java";
-        String fileNameclass = name + ".class";
-        try {
-            Path path = Paths.get(workingDir, fileName);
-            Path pathclass = Paths.get(workingDir, fileNameclass);
-
-            Files.deleteIfExists(path);
-            Files.deleteIfExists(pathclass);
-
-            return "Plik " + fileName + " został usunięty.";
-        } catch (IOException e) {
-            e.printStackTrace();
-            return "Błąd podczas usuwania pliku: " + e.getMessage();
-        }
-    }
-
-    public void CompileandRun(String name) {
-        Path sourcePath = Paths.get(workingDir, name + ".java");
-        if (!Files.exists(sourcePath)) {
-            sendToFrontend("BŁĄD: Nie znaleziono pliku " + name + ".java");
+    public void CompileandRun(String name, String extension) {
+        LanguageHandler handler = handlers.get(extension);
+        if (handler == null) {
+            sendToFrontend("BŁĄD: Nieobsługiwany język: " + extension);
             return;
         }
 
         new Thread(() -> {
             try {
-                if (currentRunningProcess != null && currentRunningProcess.isAlive()) {
-                    sendToFrontend(">>> Zatrzymywanie poprzedniego programu...");
-                    currentRunningProcess.destroyForcibly();
-                    currentRunningProcess.waitFor();
-                }
+                killExistingProcess();
+                sendToFrontend("--- Start: " + name + extension + " ---");
 
-                sendToFrontend("--- Rozpoczynam proces dla: " + name + " ---");
-
-                // 1. KOMPILACJA
-                // Pobieramy informację z managera o plikach powiązanych (jeśli są)
                 ProcesDefault procInfo = processMenager.getProcesDefaultByMainProcess(name);
+                List<String> compileCmd = handler.getCompileCommand(name,
+                        procInfo != null ? procInfo.getProcesses() : null);
 
-                ArrayList<String> compileCommands = new ArrayList<>();
-                compileCommands.add("javac");
-                compileCommands.add("-d");
-                compileCommands.add(".");
-
-                if (procInfo != null) {
-                    // Kompilujemy wszystkie pliki należące do tego procesu
-                    compileCommands.addAll(procInfo.getProcesses());
-                } else {
-                    compileCommands.add(name + ".java");
-                }
-
-                sendToFrontend(">>> Kompilacja plików: " + (procInfo != null ? procInfo.getProcesses() : name));
-
-                ProcessBuilder compileBuilder = new ProcessBuilder(compileCommands);
-                compileBuilder.directory(new File(workingDir));
-                compileBuilder.redirectErrorStream(true);
-
-                Process compileProcess = compileBuilder.start();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(compileProcess.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        sendToFrontend("[KOMPILATOR]: " + line);
+                if (compileCmd != null) {
+                    int exitCode = runProcess(compileCmd, "[KOMPILATOR]");
+                    if (exitCode != 0) {
+                        sendToFrontend("!!! BŁĄD KOMPILACJI !!!");
+                        return;
                     }
-                }
-
-                if (compileProcess.waitFor() != 0) {
-                    sendToFrontend("!!! BŁĄD KOMPILACJI !!!");
-                    return;
                 }
 
                 // 2. URUCHOMIENIE
-                sendToFrontend(">>> Uruchamianie: " + name);
-                ProcessBuilder runBuilder = new ProcessBuilder("java", "-cp", ".", name);
-                runBuilder.directory(new File(workingDir));
-                runBuilder.redirectErrorStream(true);
+                List<String> runCmd = handler.getRunCommand(name);
+                int exitCode = runProcess(runCmd, "");
+                sendToFrontend("--- Zakończono (Kod: " + exitCode + ") ---");
 
-                currentRunningProcess = runBuilder.start();
-
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(currentRunningProcess.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        sendToFrontend(line);
-                    }
-                }
-
-                int exitCode = currentRunningProcess.waitFor();
-                sendToFrontend("--- Proces zakończony (exit code: " + exitCode + ") ---");
-
-            } catch (IOException | InterruptedException e) {
-                sendToFrontend("BŁĄD SYSTEMOWY: " + e.getMessage());
+            } catch (Exception e) {
+                sendToFrontend("BŁĄD KRYTYCZNY: " + e.getMessage());
             }
         }).start();
+    }
+
+    private int runProcess(List<String> command, String prefix) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.directory(new File(workingDir));
+
+        pb.redirectErrorStream(true);
+
+        Process process = pb.start();
+        currentRunningProcess = process;
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println("PROCES LOG: " + line); // Log w IntelliJ
+                sendToFrontend(prefix + (prefix.isEmpty() ? "" : " ") + line);
+            }
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            System.out.println("Proces zakończony błędem. Kod: " + exitCode);
+        }
+        return exitCode;
+    }
+
+    private void killExistingProcess() throws InterruptedException {
+        if (currentRunningProcess != null && currentRunningProcess.isAlive()) {
+            sendToFrontend(">>> Zamykanie aktywnego procesu...");
+            currentRunningProcess.destroyForcibly();
+            currentRunningProcess.waitFor();
+        }
+    }
+
+    public String Delete(String name, String extension) {
+        try {
+            Files.deleteIfExists(Paths.get(workingDir, name + extension));
+            Files.deleteIfExists(Paths.get(workingDir, name + ".class"));
+            Files.deleteIfExists(Paths.get(workingDir, name + ".exe"));
+            files.deleteString(name);
+            return "Usunięto pomyślnie.";
+        } catch (IOException e) {
+            return "Błąd usuwania: " + e.getMessage();
+        }
     }
 
     private void sendToFrontend(String message) {

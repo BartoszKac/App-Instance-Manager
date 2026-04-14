@@ -1,0 +1,1 @@
+print("Dzialam w pythonie")

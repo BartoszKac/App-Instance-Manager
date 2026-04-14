@@ -27,23 +27,25 @@ export const fetchServerFiles = async () => {
 };
 
 // Usuwanie pliku
-export const deleteJavaFile = async (fileName) => {
-  const cleanName = fileName.replace('.java', '');
-  const response = await fetch(`${BASE_URL}/delete/${cleanName}`);
+// Zlecenie kompilacji - dodajemy parametr ext
+export const compileJavaFile = async (fileName, ext = ".java") => {
+  const cleanName = fileName.replace(ext, '');
+  // Dodajemy ?ext= na końcu
+  const response = await fetch(`${BASE_URL}/compile/${cleanName}?ext=${ext}`);
   
   if (!response.ok) {
-    throw new Error('Błąd podczas usuwania pliku');
+    throw new Error('Błąd komunikacji z endpointem kompilacji');
   }
   return response;
 };
 
-// Zlecenie kompilacji wybranego pliku
-export const compileJavaFile = async (fileName) => {
-  const cleanName = fileName.replace('.java', '');
-  const response = await fetch(`${BASE_URL}/compile/${cleanName}`);
+// Usuwanie - również dodajemy ext
+export const deleteJavaFile = async (fileName, ext = ".java") => {
+  const cleanName = fileName.replace(ext, '');
+  const response = await fetch(`${BASE_URL}/delete/${cleanName}?ext=${ext}`);
   
   if (!response.ok) {
-    throw new Error('Błąd komunikacji z endpointem kompilacji');
+    throw new Error('Błąd podczas usuwania pliku');
   }
   return response;
 };

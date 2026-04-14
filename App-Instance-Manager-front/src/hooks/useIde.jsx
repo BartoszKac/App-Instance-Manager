@@ -11,6 +11,7 @@ export const useIde = (wsUrl) => {
   
   const stompClient = useRef(null);
 
+  // Połączenie WebSocket (bez zmian, jest OK)
   useEffect(() => {
     const connectWS = () => {
       try {
@@ -27,7 +28,6 @@ export const useIde = (wsUrl) => {
           }, 
           (err) => {
             setCompileResult(prev => prev + "!!! BŁĄD: Brak połączenia z serwerem logów !!!\n");
-            console.error(err);
           }
         );
       } catch (err) {
@@ -43,86 +43,85 @@ export const useIde = (wsUrl) => {
     };
   }, [wsUrl]);
 
+  // 1. Ładowanie listy plików
   const loadFiles = async () => {
     try {
       const filesArray = await fetchServerFiles();
       setServerFiles(filesArray);
     } catch (error) {
-      setCompileResult(prev => prev + "!!! Nie udało się pobrać listy plików !!!\n");
+      console.error(error);
+      setCompileResult(prev => prev + "!!! Nie udało się pobrać listy plików (sprawdź port serwera) !!!\n");
     }
   };
 
+  // 2. Zapisywanie plików (obsługa extension)
   const saveFiles = async (filesArray) => {
     if (!filesArray || filesArray.length === 0) return;
     setIsSending(true);
     try {
       await saveJavaFiles(filesArray);
-      setCompileResult(prev => prev + `> Zapisano projekt na serwerze (${filesArray.length} plików).\n> Główny plik ustawiony na: ${filesArray[0].name}.java\n`);
+      const mainFile = filesArray[0];
+      // Wyświetlamy w logach faktyczne rozszerzenie, a nie tylko .java
+      setCompileResult(prev => prev + `> Zapisano projekt: ${mainFile.name}${mainFile.extension}\n`);
       loadFiles(); 
     } catch (error) {
-      setCompileResult(prev => prev + "!!! Błąd zapisu projektu na serwerze !!!\n");
+      setCompileResult(prev => prev + "!!! Błąd zapisu projektu !!!\n");
     } finally {
       setIsSending(false);
     }
   };
 
-  // --- NOWA FUNKCJA: Usuwanie lokalne (zakładki) ---
-  const removeLocalFile = (index, openFiles, setOpenFiles, setActiveFileIndex) => {
-    if (openFiles.length <= 1) {
-      setCompileResult(prev => prev + "> Info: Projekt musi mieć przynajmniej jeden plik.\n");
-      return;
-    }
-
-    const updatedFiles = openFiles.filter((_, i) => i !== index);
-    setOpenFiles(updatedFiles);
-
-    // Korekta aktywnego indeksu, żeby nie patrzył w "próżnię"
-    setActiveFileIndex((prevIndex) => {
-      if (prevIndex >= updatedFiles.length) return updatedFiles.length - 1;
-      return prevIndex;
-    });
-    
-    setCompileResult(prev => prev + `> Zamknięto plik lokalnie.\n`);
-  };
-
-  const compileFile = async (nameOnly) => {
+  // 3. Uruchamianie (Kompletna zmiana logiki rozszerzeń)
+  const compileFile = async (fullFileName) => {
     if (isCompiling) return;
     setIsCompiling(true);
-    setCompileResult(prev => prev + `--- Uruchamianie: ${nameOnly} ---\n`);
+
+    // Wyciągamy kropkę i to co po niej (np. .py, .java, .cpp)
+    const lastDotIndex = fullFileName.lastIndexOf('.');
+    const nameOnly = fullFileName.substring(0, lastDotIndex);
+    const extension = fullFileName.substring(lastDotIndex);
+
+    setCompileResult(prev => prev + `--- Uruchamianie: ${fullFileName} ---\n`);
+    
     try {
-      await compileJavaFile(nameOnly);
+      // Przekazujemy nazwę i rozszerzenie osobno do API
+      await compileJavaFile(nameOnly, extension);
     } catch (error) {
-      setCompileResult(prev => prev + '!!! Błąd endpointa kompilacji !!!\n');
+      setCompileResult(prev => prev + '!!! Błąd endpointa uruchamiania !!!\n');
     } finally {
       setIsCompiling(false);
     }
   };
 
-  const deleteFile = async (nameOnly) => {
-    if (!window.confirm(`Usunąć ${nameOnly}.java z serwera?`)) return;
+  // 4. Usuwanie (z obsługą rozszerzenia)
+  const deleteFile = async (fullFileName) => {
+    if (!window.confirm(`Usunąć ${fullFileName} z serwera?`)) return;
+    
+    const lastDotIndex = fullFileName.lastIndexOf('.');
+    const nameOnly = fullFileName.substring(0, lastDotIndex);
+    const extension = fullFileName.substring(lastDotIndex);
+
     try {
-      await deleteJavaFile(nameOnly);
-      setCompileResult(prev => prev + `> Usunięto: ${nameOnly}.java\n`);
+      await deleteJavaFile(nameOnly, extension);
+      setCompileResult(prev => prev + `> Usunięto: ${fullFileName}\n`);
       loadFiles();
     } catch (error) {
       setCompileResult(prev => prev + `!!! Błąd podczas usuwania !!!\n`);
     }
   };
 
+  const removeLocalFile = (index, openFiles, setOpenFiles, setActiveFileIndex) => {
+    if (openFiles.length <= 1) return;
+    const updatedFiles = openFiles.filter((_, i) => i !== index);
+    setOpenFiles(updatedFiles);
+    setActiveFileIndex((prev) => (prev >= updatedFiles.length ? updatedFiles.length - 1 : prev));
+  };
+
   const clearLogs = () => setCompileResult('');
   const addLog = (log) => setCompileResult(prev => prev + log + '\n');
 
   return {
-    isSending,
-    isCompiling,
-    serverFiles,
-    compileResult,
-    loadFiles,
-    saveFiles,
-    removeLocalFile, // Dodano do eksportu
-    compileFile,
-    deleteFile,
-    clearLogs,
-    addLog
+    isSending, isCompiling, serverFiles, compileResult,
+    loadFiles, saveFiles, removeLocalFile, compileFile, deleteFile, clearLogs, addLog
   };
 };
