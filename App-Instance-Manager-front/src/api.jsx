@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8081/app';
+const BASE_URL = '/app';
 
 // Wysyłanie całej tablicy plików (projektu) na serwer
 export const saveJavaFiles = async (filesArray) => {
@@ -7,7 +7,8 @@ export const saveJavaFiles = async (filesArray) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(filesArray),
   });
-  
+  console.log("WERSJA TESTOWA 2.0 - SPRAWDZAM ADRES");
+  console.log(`${BASE_URL}`);
   if (!response.ok) {
     throw new Error('Błąd zapisu projektu');
   }

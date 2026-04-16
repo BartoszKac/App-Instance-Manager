@@ -17,7 +17,7 @@ function App() {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
 
   const activeFile = openFiles[activeFileIndex];
-  const wsUrl = 'http://localhost:8081/ws-console';
+const wsUrl = `${window.location.origin}/ws-console`;
   
   const {
     isSending, isCompiling, serverFiles, compileResult,

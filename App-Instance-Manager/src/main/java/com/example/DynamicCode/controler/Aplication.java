@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/app")
-@CrossOrigin(origins = "http://localhost:5173") // Dopasuj do swojego frontu
+@CrossOrigin(origins = "*", allowedHeaders = "*") // Dopasuj do swojego frontu
 public class Aplication {
 
     @Autowired

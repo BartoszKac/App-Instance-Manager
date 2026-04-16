@@ -1,1 +1,0 @@
-print("Dzialam w pythonie")
