@@ -17,7 +17,8 @@ export const useIde = (wsUrl) => {
       try {
         const socket = new SockJS(wsUrl);
         stompClient.current = Stomp.over(socket);
-        stompClient.current.debug = null; 
+        // Włączamy debugowanie, żeby widzieć błędy w konsoli
+        stompClient.current.debug = (str) => console.log(str); 
 
         stompClient.current.connect({}, 
           () => {

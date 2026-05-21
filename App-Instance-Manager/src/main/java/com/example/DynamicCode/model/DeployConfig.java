@@ -1,6 +1,5 @@
 package com.example.DynamicCode.model;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,10 +9,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class CodeRequest {
-    private String name;
-    private String code;
-    private String extension;
-
+public class DeployConfig {
+    private String ip;
+    private String user;
+    private String pass;
 
 }

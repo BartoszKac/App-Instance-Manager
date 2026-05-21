@@ -1,7 +1,8 @@
-package com.example.DynamicCode.service;
+package com.example.DynamicCode.service.compiler;
 
 import com.example.DynamicCode.model.CodeRequest;
 import com.example.DynamicCode.model.ProcesDefault;
+import com.example.DynamicCode.notification.FrontendNotificationService;
 import com.example.DynamicCode.service.language.LanguageHandler;
 import com.example.DynamicCode.service.util.FilesSave;
 import com.example.DynamicCode.service.util.ProcessMenager;
@@ -17,7 +18,7 @@ import java.util.*;
 public class AplicationService {
 
     @Autowired private FilesSave files;
-    @Autowired private SimpMessagingTemplate messagingTemplate;
+    @Autowired private FrontendNotificationService frontendNotificationService;
     @Autowired private ProcessMenager processMenager;
 
     private final Map<String, LanguageHandler> handlers = new HashMap<>();
@@ -31,28 +32,19 @@ public class AplicationService {
         }
     }
 
-
     public String GetInfo() {
         try {
             File folder = new File(workingDir);
-
-            if (!folder.exists()) {
-                return "[]";
-            }
+            if (!folder.exists()) return "[]";
 
             File[] listOfFiles = folder.listFiles();
             if (listOfFiles == null) return "[]";
 
             List<String> fileNames = new ArrayList<>();
             for (File file : listOfFiles) {
-                if (file.isFile()) {
-                    fileNames.add(file.getName());
-                }
+                if (file.isFile()) fileNames.add(file.getName());
             }
-
-
             return fileNames.toString();
-
         } catch (Exception e) {
             e.printStackTrace();
             return "[]";
@@ -63,7 +55,6 @@ public class AplicationService {
         if (codes == null || codes.isEmpty()) return -1;
 
         String mainClassName = codes.get(0).getName();
-        String ext = codes.get(0).getExtension(); // Upewnij się, że CodeRequest ma to pole!
         ArrayList<String> allRelatedFiles = new ArrayList<>();
 
         try {
@@ -86,14 +77,14 @@ public class AplicationService {
     public void CompileandRun(String name, String extension) {
         LanguageHandler handler = handlers.get(extension);
         if (handler == null) {
-            sendToFrontend("BŁĄD: Nieobsługiwany język: " + extension);
+            frontendNotificationService.sendToFrontend("BŁĄD: Nieobsługiwany język: " + extension);
             return;
         }
 
         new Thread(() -> {
             try {
                 killExistingProcess();
-                sendToFrontend("--- Start: " + name + extension + " ---");
+                frontendNotificationService.sendToFrontend("--- Start: " + name + extension + " ---");
 
                 ProcesDefault procInfo = processMenager.getProcesDefaultByMainProcess(name);
                 List<String> compileCmd = handler.getCompileCommand(name,
@@ -102,18 +93,17 @@ public class AplicationService {
                 if (compileCmd != null) {
                     int exitCode = runProcess(compileCmd, "[KOMPILATOR]");
                     if (exitCode != 0) {
-                        sendToFrontend("!!! BŁĄD KOMPILACJI !!!");
+                        frontendNotificationService.sendToFrontend("!!! BŁĄD KOMPILACJI !!!");
                         return;
                     }
                 }
 
-                // 2. URUCHOMIENIE
                 List<String> runCmd = handler.getRunCommand(name);
                 int exitCode = runProcess(runCmd, "");
-                sendToFrontend("--- Zakończono (Kod: " + exitCode + ") ---");
+                frontendNotificationService.sendToFrontend("--- Zakończono (Kod: " + exitCode + ") ---");
 
             } catch (Exception e) {
-                sendToFrontend("BŁĄD KRYTYCZNY: " + e.getMessage());
+                frontendNotificationService.sendToFrontend("BŁĄD KRYTYCZNY: " + e.getMessage());
             }
         }).start();
     }
@@ -121,7 +111,6 @@ public class AplicationService {
     private int runProcess(List<String> command, String prefix) throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.directory(new File(workingDir));
-
         pb.redirectErrorStream(true);
 
         Process process = pb.start();
@@ -130,21 +119,19 @@ public class AplicationService {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println("PROCES LOG: " + line); // Log w IntelliJ
-                sendToFrontend(prefix + (prefix.isEmpty() ? "" : " ") + line);
+                System.out.println("PROCES LOG: " + line);
+                frontendNotificationService.sendToFrontend(prefix + (prefix.isEmpty() ? "" : " ") + line);
             }
         }
 
         int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            System.out.println("Proces zakończony błędem. Kod: " + exitCode);
-        }
+        if (exitCode != 0) System.out.println("Proces zakończony błędem. Kod: " + exitCode);
         return exitCode;
     }
 
     private void killExistingProcess() throws InterruptedException {
         if (currentRunningProcess != null && currentRunningProcess.isAlive()) {
-            sendToFrontend(">>> Zamykanie aktywnego procesu...");
+            frontendNotificationService.sendToFrontend(">>> Zamykanie aktywnego procesu...");
             currentRunningProcess.destroyForcibly();
             currentRunningProcess.waitFor();
         }
@@ -162,7 +149,10 @@ public class AplicationService {
         }
     }
 
-    private void sendToFrontend(String message) {
-        messagingTemplate.convertAndSend("/topic/output", message);
-    }
+    // -----------------------------------------------------------------------
+    // DEPLOY: wysyła WSZYSTKIE powiązane pliki i uruchamia główny na serwerze
+    // -----------------------------------------------------------------------
+
+
+
 }

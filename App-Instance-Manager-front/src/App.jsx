@@ -4,6 +4,7 @@ import { CodeEditor } from './components/CodeEditor';
 import { FileExplorer } from './components/FileExplorer';
 import { Terminal } from './components/Terminal';
 import './App.css';
+import { DeployPanel } from './components/DeployPanel';
 
 function App() {
   // 1. ZMIANA: Dodajemy pole extension do obiektów plików
@@ -17,8 +18,10 @@ function App() {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
 
   const activeFile = openFiles[activeFileIndex];
-const wsUrl = `${window.location.origin}/ws-console`;
-  
+// Zostawiamy czysty port i bezpośredni endpoint rejestracyjny
+const wsUrl = 'http://localhost:8888/ws-console';
+
+
   const {
     isSending, isCompiling, serverFiles, compileResult,
     loadFiles, saveFiles, compileFile, deleteFile, removeLocalFile, clearLogs, addLog
@@ -61,8 +64,8 @@ const wsUrl = `${window.location.origin}/ws-console`;
   return (
     <div style={{ display: 'flex', maxWidth: '1400px', margin: '0 auto', padding: '20px', gap: '20px', color: '#fff', background: '#121212', minHeight: '95vh', fontFamily: 'Segoe UI' }}>
       
+      {/* LEWA KOLUMNA: Edytor i Zakładki */}
       <div style={{ flex: 1.5, display: 'flex', flexDirection: 'column' }}>
-        {/* Pasek Zakładek */}
         <div style={{ display: 'flex', gap: '5px', marginBottom: '0px', overflowX: 'auto' }}>
           {openFiles.map((file, idx) => (
             <div key={idx} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -81,7 +84,6 @@ const wsUrl = `${window.location.origin}/ws-console`;
                   transition: '0.2s'
                 }}
               >
-                {/* 3. ZMIANA: Wyświetlamy dynamiczne rozszerzenie */}
                 {file.name || 'bez_nazwy'}{file.extension}
                 {idx === 0 && <span style={{ marginLeft: '5px', color: '#10b981', fontSize: '10px' }}>★</span>}
               </button>
@@ -111,7 +113,6 @@ const wsUrl = `${window.location.origin}/ws-console`;
           </button>
         </div>
 
-        {/* 4. ZMIANA: Przekazujemy extension i handler zmiany do edytora */}
         <CodeEditor 
           fileName={activeFile.name} 
           setFileName={handleNameChange}
@@ -124,16 +125,19 @@ const wsUrl = `${window.location.origin}/ws-console`;
         />
       </div>
 
+      {/* PRAWA KOLUMNA: Eksplorator, SSH i Terminal */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <FileExplorer 
           files={serverFiles}
           isCompiling={isCompiling}
           onRefresh={loadFiles}
-          // 5. ZMIANA: Upewnij się, że Twoje hooki (deleteFile, compileFile) 
-          // przyjmują teraz (name, extension) jeśli to zaktualizowałeś.
           onDelete={deleteFile}
           onCompile={compileFile}
         />
+        
+        {/* Panel SSH w samym środku prawej kolumny */}
+        <DeployPanel activeFile={activeFile} addLog={addLog} />
+
         <Terminal logs={compileResult} onClear={clearLogs} />
       </div>
 

@@ -1,50 +1,53 @@
 package com.example.DynamicCode.service.language;
 
 import org.springframework.stereotype.Component;
-import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
 public class CppHandler implements LanguageHandler {
 
     @Override
-    public String getExtension() {
-        return ".cpp";
-    }
+    public String getExtension() { return ".cpp"; }
 
     @Override
     public List<String> getCompileCommand(String mainFileName, List<String> allFiles) {
-        System.out.println("--- DIAGNOSTYKA ŚCIEŻEK C++ ---");
+        // Szukamy g++ w PATH (działa na Linux i Windows z MSYS2/MinGW w PATH)
+        // Możesz też ustawić zmienną środowiskową GPP_PATH jeśli g++ nie jest w PATH
+        String gpp = System.getenv("GPP_PATH") != null ? System.getenv("GPP_PATH") : "g++";
 
-        // Pobieramy ścieżkę do folderu 'app'
-        File currentDir = new File("app");
-        System.out.println("Szukam plików w: " + currentDir.getAbsolutePath());
+        String outputFile = mainFileName + (isWindows() ? ".exe" : "");
 
-        // Wypisujemy zawartość folderu do konsoli IDE
-        String[] files = currentDir.list();
-        if (files != null && files.length > 0) {
-            System.out.println("Pliki znalezione w folderze app:");
-            for (String f : files) {
-                System.out.println("  -> " + f);
+        List<String> cmd = new ArrayList<>();
+        cmd.add(gpp);
+
+        if (allFiles != null && !allFiles.isEmpty()) {
+            // Kompilujemy WSZYSTKIE pliki .cpp naraz
+            for (String file : allFiles) {
+                if (file.endsWith(".cpp")) {
+                    cmd.add(file);
+                }
             }
         } else {
-            System.out.println("!!! UWAGA: Folder 'app' jest pustY lub nie istnieje !!!");
+            cmd.add(mainFileName + ".cpp");
         }
 
-        String gppExecutable = "C:\\msys64\\ucrt64\\bin\\g++.exe";
+        cmd.add("-o");
+        cmd.add(outputFile);
+        cmd.add("-Wall");
 
-        String sourceFile = mainFileName + ".cpp";
-        String outputFile = mainFileName + ".exe";
-
-        System.out.println("Próba kompilacji: " + sourceFile + " do " + outputFile);
-
-
-        return List.of(gppExecutable, sourceFile, "-o", outputFile, "-Wall");
+        System.out.println("C++ compile cmd: " + cmd);
+        return cmd;
     }
 
     @Override
     public List<String> getRunCommand(String mainFileName) {
+        String exe = mainFileName + (isWindows() ? ".exe" : "");
+        // Na Linuxie trzeba poprzedzić './' żeby uruchomić plik z bieżącego katalogu
+        return isWindows() ? List.of(exe) : List.of("./" + exe);
+    }
 
-        return List.of(mainFileName + ".exe");
+    private boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("win");
     }
 }
