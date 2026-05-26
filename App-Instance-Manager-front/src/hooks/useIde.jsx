@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
-import { saveJavaFiles, fetchServerFiles, compileJavaFile, deleteJavaFile } from '../api'; 
+import { saveJavaFiles, fetchServerFiles, compileJavaFile, deleteJavaFile } from '../api/api'; 
 
 export const useIde = (wsUrl) => {
   const [isSending, setIsSending] = useState(false);

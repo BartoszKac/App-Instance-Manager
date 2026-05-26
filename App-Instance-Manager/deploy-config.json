@@ -1,4 +1,1 @@
-[
-  {"ip":"string","user":"string","pass":"string"},
-  {"ip":"string","user":"string","pass":"string"}
-]
+[{"name":null,"ip":"string","user":"string","pass":"string"},{"name":null,"ip":"string","user":"string","pass":"string"},{"name":null,"ip":"100.103.99.6","user":"user","pass":"user"},{"name":"Konfiracja","ip":"100.103.99.6","user":"user","pass":"user"}]

@@ -1,6 +1,6 @@
 package com.example.DynamicCode.service.util;
 
-import com.example.DynamicCode.model.ProcesDefault;
+import com.example.DynamicCode.model.dto.proces.ProcesDefault;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 
