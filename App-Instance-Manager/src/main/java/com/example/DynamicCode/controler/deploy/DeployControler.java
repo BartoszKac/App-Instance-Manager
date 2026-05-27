@@ -1,7 +1,7 @@
 package com.example.DynamicCode.controler.deploy;
 
 import com.example.DynamicCode.model.entity.deploy.RemoteSerwerConfiguration;
-import com.example.DynamicCode.service.deploy.DeployService;
+import com.example.DynamicCode.service.deploy.test.DeployService;
 import com.example.DynamicCode.service.deploymentconfig.DeployConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

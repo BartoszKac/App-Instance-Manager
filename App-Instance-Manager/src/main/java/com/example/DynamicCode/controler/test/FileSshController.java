@@ -18,10 +18,10 @@ import java.io.InputStream;
 @CrossOrigin(origins = "*")
 public class FileSshController {
 
-    private static final String SSH_HOST = "twoj.drugi.komputer.ip";
+    private static final String SSH_HOST = "100.103.99.6";
     private static final int SSH_PORT = 22;
-    private static final String SSH_USER = "username";
-    private static final String SSH_PASS = "password";
+    private static final String SSH_USER = "user";
+    private static final String SSH_PASS = "user";
     private static final String REMOTE_DIR = "/home/username/downloads/";
 
     @Operation(summary = "Wysyła wybrany plik przez protokół SSH/SFTP na drugi komputer")

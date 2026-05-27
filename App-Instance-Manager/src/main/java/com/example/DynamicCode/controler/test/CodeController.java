@@ -4,9 +4,9 @@ import com.example.DynamicCode.model.entity.code.CompiledCode; // NOWOŚĆ
 import com.example.DynamicCode.databaseservice.code.SourceCodeService;
 import com.example.DynamicCode.databaseservice.code.CompiledCodeService; // NOWOŚĆ
 import com.example.DynamicCode.model.entity.code.SourceCode;
-import com.example.DynamicCode.service.code.CodeServices;
-import com.example.DynamicCode.service.code.CompilerService;
-import com.example.DynamicCode.service.launcher.AppLauncherService;
+import com.example.DynamicCode.service.code.compilation.CompilationService;
+import com.example.DynamicCode.service.code.launcher.AppLauncherService;
+import com.example.DynamicCode.service.file.SavingDataInSystemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,9 +23,9 @@ public class CodeController {
 
     private final SourceCodeService sourceCodeService;
     private final CompiledCodeService compiledCodeService;
-    private final CompilerService compilerService;
+    private final CompilationService compilationService;
     private final AppLauncherService appLauncherService;
-    private final CodeServices codeServices;
+    private final SavingDataInSystemService savingDataInSystemService;
 
     /**
      * Endpoint 1: Zapis wielu plików do bazy danych
@@ -35,7 +35,7 @@ public class CodeController {
     public ResponseEntity<String> saveMultipleFiles(@RequestBody List<SourceCode> codeRequests) {
         log.info("Otrzymano żądanie zapisu listy plików. Liczba plików: {}", codeRequests.size());
         try {
-            codeServices.saveCodeToDbAndDisk(codeRequests);
+            savingDataInSystemService.saveSourceCodeIntheSystem(codeRequests);
             return ResponseEntity.ok("Wszystkie pliki zostały pomyślnie zapisane w bazie danych!");
         } catch (Exception e) {
             log.error("Błąd podczas zapisu plików do bazy: ", e);
@@ -52,7 +52,7 @@ public class CodeController {
     public ResponseEntity<String> compileFiles(@PathVariable Long idMainClass) {
         log.info("Otrzymano żądanie kompilacji dla idMainClass: {}", idMainClass);
         try {
-            compilerService.compileAllFilesFromMainClass(idMainClass);
+            compilationService.compileAllFilesFromMainClass(idMainClass);
             return ResponseEntity.ok("Proces kompilacji dla idMainClass " + idMainClass + " został zakończony sukcesem.");
         } catch (IllegalArgumentException e) {
             log.warn("Błąd biznesowy walidacji: {}", e.getMessage());
