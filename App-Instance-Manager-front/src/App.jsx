@@ -5,6 +5,7 @@ import { FileExplorer } from './components/FileExplorer';
 import { Terminal } from './components/Terminal';
 import './App.css';
 import { DeployPanel } from './components/DeployPanel';
+import { SshUpload } from './components/SshUpload';
 
 function App() {
   // 1. ZMIANA: Dodajemy pole extension do obiektów plików
@@ -137,7 +138,7 @@ const wsUrl = 'http://localhost:8888/ws-console';
         
         {/* Panel SSH w samym środku prawej kolumny */}
         <DeployPanel activeFile={activeFile} addLog={addLog} />
-
+          <SshUpload />
         <Terminal logs={compileResult} onClear={clearLogs} />
       </div>
 

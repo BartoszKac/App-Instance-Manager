@@ -1,5 +1,6 @@
 package com.example.DynamicCode.databaseservice.code;
 
+import com.example.DynamicCode.databaseservice.DataBaseProvider;
 import com.example.DynamicCode.model.entity.code.SourceCode;
 import com.example.DynamicCode.repository.code.CodeRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +13,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-public class SourceCodeService {
+public class SourceCodeService implements DataBaseProvider<SourceCode> {
 
     @Autowired
     private CodeRepository codeRepository;
@@ -44,6 +45,7 @@ public class SourceCodeService {
 
 
     @Transactional(readOnly = true)
+    @Override
     public List<SourceCode> getAllFilesFromMainClass(Long idMainClass) {
         try {
             log.info("Pobieram WSZYSTKIE pliki dla idMainClass: {}", idMainClass);

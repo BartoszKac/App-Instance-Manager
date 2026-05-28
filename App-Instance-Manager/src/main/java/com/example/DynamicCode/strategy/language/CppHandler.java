@@ -12,8 +12,7 @@ public class CppHandler implements LanguageHandler {
 
     @Override
     public List<String> getCompileCommand(String mainFileName, List<String> allFiles) {
-        // Szukamy g++ w PATH (działa na Linux i Windows z MSYS2/MinGW w PATH)
-        // Możesz też ustawić zmienną środowiskową GPP_PATH jeśli g++ nie jest w PATH
+
         String gpp = System.getenv("GPP_PATH") != null ? System.getenv("GPP_PATH") : "g++";
 
         String outputFile = mainFileName + (isWindows() ? ".exe" : "");
@@ -22,7 +21,6 @@ public class CppHandler implements LanguageHandler {
         cmd.add(gpp);
 
         if (allFiles != null && !allFiles.isEmpty()) {
-            // Kompilujemy WSZYSTKIE pliki .cpp naraz
             for (String file : allFiles) {
                 if (file.endsWith(".cpp")) {
                     cmd.add(file);
@@ -43,7 +41,6 @@ public class CppHandler implements LanguageHandler {
     @Override
     public List<String> getRunCommand(String mainFileName) {
         String exe = mainFileName + (isWindows() ? ".exe" : "");
-        // Na Linuxie trzeba poprzedzić './' żeby uruchomić plik z bieżącego katalogu
         return isWindows() ? List.of(exe) : List.of("./" + exe);
     }
 

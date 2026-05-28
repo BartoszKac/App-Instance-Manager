@@ -102,4 +102,17 @@ public class RemoteSerwerService {
             throw new RuntimeException("Nie udało się pobrać konfiguracji z bazy danych", e);
         }
     }
+
+    @Transactional(readOnly = true)
+    public List<RemoteSerwerConfiguration> getAllConfigs() {
+        log.info("Pobieram absolutnie wszystkie konfiguracje serwerów z bazy danych.");
+        try {
+            List<RemoteSerwerConfiguration> allConfigs = deployConfigRepository.findAll();
+            log.info("Pomyślnie pobrano wszystkie konfiguracje. Łączna liczba: {}", allConfigs.size());
+            return allConfigs;
+        } catch (Exception e) {
+            log.error("Błąd podczas pobierania wszystkich konfiguracji z bazy: ", e);
+            throw new RuntimeException("Nie udało się pobrać listy konfiguracji serwerów", e);
+        }
+    }
 }

@@ -1,14 +1,16 @@
-package com.example.DynamicCode.controler.deploy;
+package com.example.DynamicCode.controller.test.deploy;
 
 import com.example.DynamicCode.model.entity.deploy.RemoteSerwerConfiguration;
 import com.example.DynamicCode.service.deploy.test.DeployService;
-import com.example.DynamicCode.service.deploymentconfig.DeployConfigService;
+import com.example.DynamicCode.service.test.deployconfig.DeployConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/app")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
+@Profile("dev")
 public class DeployControler {
 
     @Autowired

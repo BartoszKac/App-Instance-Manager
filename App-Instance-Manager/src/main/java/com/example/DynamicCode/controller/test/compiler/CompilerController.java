@@ -1,9 +1,10 @@
-package com.example.DynamicCode.controler.compiler;
+package com.example.DynamicCode.controller.test.compiler;
 
 
 import com.example.DynamicCode.model.entity.code.SourceCode;
 import com.example.DynamicCode.service.code.test.AplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 @RestController
 @RequestMapping("/app")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
+@Profile("dev")
 public class CompilerController {
 
 

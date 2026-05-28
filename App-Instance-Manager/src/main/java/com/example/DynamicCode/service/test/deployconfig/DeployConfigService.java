@@ -1,4 +1,4 @@
-package com.example.DynamicCode.service.deploymentconfig;
+package com.example.DynamicCode.service.test.deployconfig;
 
 import com.example.DynamicCode.model.entity.deploy.RemoteSerwerConfiguration;
 import com.fasterxml.jackson.core.type.TypeReference;

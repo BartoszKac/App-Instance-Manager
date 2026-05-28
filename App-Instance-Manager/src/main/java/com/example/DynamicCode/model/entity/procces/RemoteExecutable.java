@@ -21,8 +21,9 @@ public class RemoteExecutable {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "contents", nullable = false, columnDefinition = "TEXT")
-    private String contents;
+    @Lob
+    @Column(name = "contents", nullable = false, columnDefinition = "LONGBLOB")
+    private byte[] contents;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "language", nullable = false)

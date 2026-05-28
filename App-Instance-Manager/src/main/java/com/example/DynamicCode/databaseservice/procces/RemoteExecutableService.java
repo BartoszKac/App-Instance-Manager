@@ -1,5 +1,6 @@
 package com.example.DynamicCode.databaseservice.procces;
 
+import com.example.DynamicCode.databaseservice.DataBaseProvider;
 import com.example.DynamicCode.model.entity.procces.RemoteExecutable;
 import com.example.DynamicCode.repository.procces.RemoteExecutableRepository;
 import lombok.RequiredArgsConstructor;
@@ -7,12 +8,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RemoteExecutableService {
+public class RemoteExecutableService implements DataBaseProvider<RemoteExecutable> {
+
+
 
     private final RemoteExecutableRepository remoteExecutableRepository;
 
@@ -52,17 +56,18 @@ public class RemoteExecutableService {
     }
 
     @Transactional(readOnly = true)
-    public RemoteExecutable getExecutableById(Long id) {
+    @Override
+    public List<RemoteExecutable> getAllFilesFromMainClass(Long id) {
         try {
-            log.info("RemoteExecutableStorage: Pobieram zdalny plik wykonywalny o ID: {}", id);
+            log.info("RemoteExecutableStorage: Pobieram plik o ID: {}", id);
+
             return remoteExecutableRepository.findById(id)
-                    .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono zdalnego pliku wykonywalnego o podanym ID: " + id));
-        } catch (IllegalArgumentException e) {
-            log.warn("RemoteExecutableStorage: Brak rekordu w bazie: {}", e.getMessage());
-            throw e;
+                    .map(List::of)
+                    .orElse(Collections.emptyList());
+
         } catch (Exception e) {
-            log.error("RemoteExecutableStorage: Błąd podczas pobierania pliku o ID: {}. Powód: ", id, e);
-            throw new RuntimeException("Nie udało się pobrać zdalnego pliku wykonywalnego z bazy danych", e);
+            log.error("RemoteExecutableStorage: Błąd podczas pobierania pliku o ID: {}.", id, e);
+            throw new RuntimeException("Błąd bazy danych przy pobieraniu pliku", e);
         }
     }
 

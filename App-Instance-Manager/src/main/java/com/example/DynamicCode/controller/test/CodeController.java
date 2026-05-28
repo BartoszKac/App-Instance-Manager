@@ -1,4 +1,4 @@
-package com.example.DynamicCode.controler.test;
+package com.example.DynamicCode.controller.test;
 
 import com.example.DynamicCode.model.entity.code.CompiledCode; // NOWOŚĆ
 import com.example.DynamicCode.databaseservice.code.SourceCodeService;
@@ -9,6 +9,7 @@ import com.example.DynamicCode.service.code.launcher.AppLauncherService;
 import com.example.DynamicCode.service.file.SavingDataInSystemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ import java.util.List;
 @RequestMapping("/api/code")
 @RequiredArgsConstructor
 @Slf4j
+@Profile("dev")
 public class CodeController {
 
     private final SourceCodeService sourceCodeService;

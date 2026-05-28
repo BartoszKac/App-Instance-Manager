@@ -4,7 +4,8 @@ public enum LanguageType {
     JAVA(".java"),
     PYTHON(".py"),
     CPP(".cpp"),
-    BASH(".sh");
+    BASH(".sh"),
+    UNKNOWN("");
 
     private final String extension;
 

@@ -2,7 +2,7 @@ package com.example.DynamicCode.service.deploy.test;
 
 import com.example.DynamicCode.model.dto.proces.ProcesDefault;
 import com.example.DynamicCode.notification.FrontendNotificationService;
-import com.example.DynamicCode.service.util.ProcessMenager; // Popraw literówkę w nazwie klasy jeśli możesz (Manager)
+import com.example.DynamicCode.service.test.util.ProcessMenager; // Popraw literówkę w nazwie klasy jeśli możesz (Manager)
 import com.jcraft.jsch.*;
 import org.springframework.stereotype.Service;
 

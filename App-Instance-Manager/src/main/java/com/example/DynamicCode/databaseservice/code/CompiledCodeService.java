@@ -1,5 +1,6 @@
 package com.example.DynamicCode.databaseservice.code;
 
+import com.example.DynamicCode.databaseservice.DataBaseProvider;
 import com.example.DynamicCode.model.entity.code.CompiledCode; // Zmiana na poprawną encję
 import com.example.DynamicCode.repository.code.CompiledCodeRepository; // Zakładam taką nazwę repozytorium dla CompiledCode
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CompiledCodeService {
+public class CompiledCodeService implements DataBaseProvider<CompiledCode> {
 
     private final CompiledCodeRepository compiledCodeRepository;
 
@@ -42,6 +43,7 @@ public class CompiledCodeService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public List<CompiledCode> getAllFilesFromMainClass(Long idMainClass) {
         try {
             log.info("CompiledCodeStorage: Pobieram WSZYSTKIE skompilowane pliki dla idMainClass: {}", idMainClass);

@@ -1,4 +1,4 @@
-package com.example.DynamicCode.factory.sshfiiletransfer;
+package com.example.DynamicCode.factory.deploy.sshfiiletransfer;
 
 
 import com.example.DynamicCode.constants.deploy.UploadStrategyType;
@@ -11,23 +11,14 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Fabryka strategii wysyłania plików.
- *
- * Spring automatycznie wstrzykuje wszystkie beany implementujące FileUploadStrategy.
- * Fabryka buduje mapę: UploadStrategyType -> strategia, dzięki czemu
- * dodanie nowej strategii nie wymaga żadnych zmian w fabryce.
- */
+
 @Slf4j
 @Component
 public class FileUploadStrategyFactory {
 
     private final Map<UploadStrategyType, FileUploadStrategy> strategyMap;
 
-    /**
-     * Spring wstrzykuje listę wszystkich implementacji FileUploadStrategy
-     * zarejestrowanych jako beany (@Component).
-     */
+
     public FileUploadStrategyFactory(List<FileUploadStrategy> strategies) {
         this.strategyMap = strategies.stream()
                 .collect(Collectors.toMap(
@@ -38,13 +29,7 @@ public class FileUploadStrategyFactory {
                 strategyMap.size(), strategyMap.keySet());
     }
 
-    /**
-     * Zwraca strategię dla podanego typu.
-     *
-     * @param type typ strategii
-     * @return odpowiednia implementacja FileUploadStrategy
-     * @throws IllegalArgumentException gdy brak strategii dla podanego typu
-     */
+
     public FileUploadStrategy getStrategy(UploadStrategyType type) {
         FileUploadStrategy strategy = strategyMap.get(type);
         if (strategy == null) {

@@ -1,7 +1,7 @@
 package com.example.DynamicCode.service.code.compilation;
 
 import com.example.DynamicCode.databaseservice.file.SourceFolderInTheDiskService;
-import com.example.DynamicCode.factory.langugage.LanguageHandlerFactory;
+import com.example.DynamicCode.factory.code.langugage.LanguageHandlerFactory;
 import com.example.DynamicCode.mapper.code.MapperCode;
 import com.example.DynamicCode.databaseservice.code.SourceCodeService;
 import com.example.DynamicCode.model.entity.code.SourceCode;
@@ -61,12 +61,4 @@ public class CompilationService {
         }
     }
 
-
-
-
-
-
-    private boolean isCollectionEmpty(List<?> collection) {
-        return collection == null || collection.isEmpty();
-    }
 }
