@@ -1,0 +1,1 @@
+// Plik przeniesiony do src/execution/viewmodel/useExecutionViewModel.ts

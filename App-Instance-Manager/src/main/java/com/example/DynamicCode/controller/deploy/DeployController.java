@@ -3,6 +3,7 @@ package com.example.DynamicCode.controller.deploy;
 import com.example.DynamicCode.constants.deploy.UploadStrategyType;
 import com.example.DynamicCode.model.dto.deploy.TransferTask;
 import com.example.DynamicCode.model.entity.deploy.RemoteSerwerConfiguration;
+import com.example.DynamicCode.model.entity.deploy.RemoteProgramConfiguration; // Upewnij się, że pakiet jest poprawny
 import com.example.DynamicCode.service.deploy.provider.ProviderDeployService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,11 +16,18 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/deploy")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class DeployController {
 
     private final ProviderDeployService providerDeployService;
 
     // --- SERWERY ---
+
+    @GetMapping("/servers")
+    public ResponseEntity<List<RemoteSerwerConfiguration>> getAllServerConfigurations() {
+        log.info("[Provider-Deploy] Pobieranie wszystkich konfiguracji serwerów z bazy danych.");
+        return ResponseEntity.ok(providerDeployService.getAllServerConfigurations());
+    }
 
     @PostMapping("/server")
     public ResponseEntity<RemoteSerwerConfiguration> registerServer(@RequestBody RemoteSerwerConfiguration config) {
@@ -46,6 +54,20 @@ public class DeployController {
     public ResponseEntity<Void> removeServerConfig(@PathVariable Long idConfiguration) {
         providerDeployService.removeServerConfiguration(idConfiguration);
         return ResponseEntity.noContent().build();
+    }
+
+    // --- PROGRAMY ---
+
+    @GetMapping("/program/{mainClassId}")
+    public ResponseEntity<RemoteProgramConfiguration> getProgramConfiguration(@PathVariable Long mainClassId) {
+        log.info("[API-Deploy] Zapytanie HTTP GET o konfigurację programu dla MainClassId: {}", mainClassId);
+        return ResponseEntity.ok(providerDeployService.getProgramConfiguration(mainClassId));
+    }
+
+    @GetMapping("/programs")
+    public ResponseEntity<List<RemoteProgramConfiguration>> getAllConfigurations() {
+        log.info("[API-Deploy] Zapytanie HTTP GET o wszystkie konfiguracje programów.");
+        return ResponseEntity.ok(providerDeployService.getAllConfigurations());
     }
 
     // --- TRANSFERY / WDROŻENIA ---

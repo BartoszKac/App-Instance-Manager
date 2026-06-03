@@ -42,27 +42,21 @@ public class SavingDataInSystemService {
         log.info("Rozpoczynam proces zapisu systemu dla {} plików źródłowych.", sourceCodes.size());
 
         try {
-            // 1. Generujemy unikalną ścieżkę na dysku
             String uniquePath = fileService.generateUniquePath();
 
-            // 2. Zapis plików na dysku fizycznym
             fileService.saveFilesToDisk(sourceCodes, uniquePath);
 
-            // 3. Zapis plików źródłowych do bazy danych
             log.info("Zapisuję pliki źródłowe do bazy danych...");
             sourceCodeService.saveAllFilesToDb(sourceCodes);
 
-            // 4. Mapujemy i zapisujemy informację o folderze w bazie danych przy użyciu MAPPERA
             log.info("Zapisuję informację o folderze [{}] do bazy danych...", uniquePath);
 
-            // WYWOŁANIE MAPPERA:
             SourceFolderInTheDisk folder = mapperFile.toFolderInTheDisk(sourceCodes, uniquePath);
 
             sourceFolderInTheDiskService.saveToDb(folder);
 
             log.info("Proces zapisu zakończony pełnym sukcesem!");
 
-            // Zwracamy unikalną ścieżkę jako zwrotkę dla kompilatora
             return uniquePath;
 
         } catch (Exception e) {
@@ -82,7 +76,6 @@ public class SavingDataInSystemService {
     @Transactional
     public void handleCompilationResult(Long idMainClass, List<SourceCode> sourceFiles) {
 
-        // 1. Pobieramy cały obiekt folderu źródłowego, aby skopiować jego metadane (nazwę i ścieżkę)
         SourceFolderInTheDisk sourceFolder = sourceFolderInTheDiskService.getFoldersFromSourceCodeId(idMainClass);
 
         if (sourceFolder == null || sourceFolder.getPath() == null) {
@@ -92,7 +85,6 @@ public class SavingDataInSystemService {
 
         String folderPath = sourceFolder.getPath();
 
-        // 2. Odczyt plików binarnych z dysku
         List<CodeFileDto> rawBinaryFiles = fileService.readFilesFromDisk(folderPath);
 
         if (rawBinaryFiles.isEmpty()) {

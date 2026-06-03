@@ -15,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/code")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class CodeController {
 
     private final ProviderCodeService providerCodeService;

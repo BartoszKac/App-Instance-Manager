@@ -1,6 +1,8 @@
 package com.example.DynamicCode.service.deploy.provider;
 
+import com.example.DynamicCode.databaseservice.deploy.RemoteProgramService;
 import com.example.DynamicCode.model.dto.deploy.TransferTask;
+import com.example.DynamicCode.model.entity.deploy.RemoteProgramConfiguration;
 import com.example.DynamicCode.model.entity.deploy.RemoteSerwerConfiguration;
 import com.example.DynamicCode.service.deploy.serwer.SerwerConfigurationService;
 import com.example.DynamicCode.service.deploy.transport.EnviromentTransferService;
@@ -17,6 +19,7 @@ public class ProviderDeployService {
 
     private final SerwerConfigurationService serwerConfigurationService;
     private final EnviromentTransferService enviromentTransferService;
+    private final RemoteProgramService remoteProgramService;
 
     // --- SEKCJA ZARZĄDZANIA SERWERAMI (KONFIGURACJA) ---
 
@@ -87,5 +90,13 @@ public class ProviderDeployService {
     public void executeSingleEnvironmentTransfer(Long mainClassId, Long idConfiguration, com.example.DynamicCode.constants.deploy.UploadStrategyType uploadStrategyType) {
         log.info("[Provider-Deploy] Ręczne wywołanie transferu dla klasy: {}, konfiguracji serwera: {}", mainClassId, idConfiguration);
         enviromentTransferService.transferEnvironment(mainClassId, idConfiguration, uploadStrategyType);
+    }
+    public RemoteProgramConfiguration getProgramConfiguration(Long mainClassId) {
+        log.info("[Provider-Deploy] Pobieranie konfiguracji programu dla MainClassId: {}", mainClassId);
+        return remoteProgramService.getConfigurationById(mainClassId);
+    }
+    public List<RemoteProgramConfiguration> getAllConfigurations() {
+        log.info("[Provider-Deploy] Pobieranie wszystkich konfiguracji programów z bazy danych.");
+        return remoteProgramService.getAllConfigurations();
     }
 }
