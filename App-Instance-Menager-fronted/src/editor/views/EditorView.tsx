@@ -12,15 +12,21 @@ interface EditorViewProps {
 }
 
 export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeploy, onExecution }) => {
-  const { state, openFile, closeTab, reset } = useEditor(project.files);
+  const { state, openFile, closeTab } = useEditor(project.files);
 
   const [files, setFiles] = React.useState(project.files);
 
+  const activeFileWithContent = useMemo(() => {
+    if (!state.activeFile) return null;
+    // Pobieramy plik z lokalnego stanu 'files', aby mieć aktualną treść podczas pisania
+    return files.find(f => f.name === state.activeFile?.name) || state.activeFile;
+  }, [state.activeFile, files]);
+
   const lineCount = useMemo(() => {
-    if (!state.activeFile) return 0;
-    const code = state.activeFile.content || SAMPLE_CODE[state.activeFile.ext] || '';
+    if (!activeFileWithContent) return 0;
+    const code = activeFileWithContent.content || SAMPLE_CODE[activeFileWithContent.ext] || '';
     return code.split('\n').length;
-  }, [state.activeFile]);
+  }, [activeFileWithContent]);
 
   const handleFileAdd = (file: ProjectFile) => {
     setFiles((prev) => [...prev, file]);
@@ -30,6 +36,20 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
   const handleFileRemove = (fileName: string) => {
     setFiles((prev) => prev.filter((f) => f.name !== fileName));
     closeTab(fileName);
+  };
+
+  const handleContentChange = (newContent: string) => {
+    console.log('[EditorView] handleContentChange wywołane dla pliku:', state.activeFile?.name);
+    if (!state.activeFile) return;
+    setFiles((prev) => {
+      const newFiles = prev.map((f) => (f.name === state.activeFile?.name ? { ...f, content: newContent } : f));
+      console.log('[EditorView] Nowy stan tablicy plików:', newFiles);
+      return newFiles;
+    });
+  };
+
+  const handleClearFile = () => {
+    handleContentChange('');
   };
 
   const projectWithFiles = { ...project, files };
@@ -52,8 +72,9 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
         }
         right={
           <>
-            <button className="nav-btn secondary">Uruchom</button>
-            <button className="nav-btn primary">Zapisz</button>
+            <button className="nav-btn secondary" onClick={handleClearFile}>Wyczyść</button>
+            <button className="nav-btn secondary" onClick={onDeploy}>Uruchom</button>
+            <button className="nav-btn primary" onClick={() => console.log('Zapisywanie plików...', files)}>Zapisz</button>
           </>
         }
       />
@@ -74,8 +95,8 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
             onTabClick={openFile}
             onTabClose={closeTab}
           />
-          <CodeView file={state.activeFile} />
-          <StatusBar file={state.activeFile} lineCount={lineCount} />
+          <CodeView file={activeFileWithContent} onContentChange={handleContentChange} />
+          <StatusBar file={activeFileWithContent} lineCount={lineCount} />
         </div>
       </div>
     </div>

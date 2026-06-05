@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EditorState, ProjectFile, INITIAL_EDITOR_STATE } from '../model/EditorState';
+import { EditorState, ProjectFile } from '../model/EditorState';
 
 export const useEditor = (initialFiles: ProjectFile[] = []) => {
   const firstFile = initialFiles[0] ?? null;

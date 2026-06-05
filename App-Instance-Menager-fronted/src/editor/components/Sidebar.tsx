@@ -31,7 +31,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (!val) return;
     const parts = val.split('.');
     const ext = parts.length > 1 ? parts[parts.length - 1] : 'txt';
-    onFileAdd({ name: val, ext, content: '' });
+    // content: undefined — ?? w CodeView pokaże SAMPLE_CODE dla tego rozszerzenia
+    onFileAdd({ name: val, ext });
     setNewFileName('');
     setIsAdding(false);
   };

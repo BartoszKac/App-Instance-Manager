@@ -1,10 +1,32 @@
+// src/editor/model/EditorState.ts
+
 export type Language = 'ts' | 'py' | 'js' | 'rs' | 'css' | 'json';
+
+export type LanguageType = Language;
+export type CompileStatus = 'pending' | 'success' | 'error' | 'running';
 
 export interface ProjectFile {
   name: string;
   ext: string;
   content?: string;
 }
+
+export interface SourceCode {
+  id: string;
+  name: string;
+  content: string;
+  language: LanguageType;
+  createdAt: string;
+}
+
+export interface CompiledCode {
+  id: string;
+  sourceCodeId: string;
+  status: CompileStatus;
+  output: string;
+  compiledAt: string;
+}
+
 export interface DeployedInstance {
   id: string;
   status: 'online' | 'offline' | 'busy';
@@ -48,28 +70,28 @@ export const INITIAL_PROJECTS_STATE: ProjectsState = {
 
 export const DEFAULT_FILES: Record<Language, ProjectFile[]> = {
   ts: [
-    { name: 'App.tsx', ext: 'ts', content: '' },
-    { name: 'useStore.ts', ext: 'ts', content: '' },
-    { name: 'types.ts', ext: 'ts', content: '' },
-    { name: 'styles.css', ext: 'css', content: '' },
+    { name: 'App.tsx',     ext: 'ts'   },
+    { name: 'useStore.ts', ext: 'ts'   },
+    { name: 'types.ts',    ext: 'ts'   },
+    { name: 'styles.css',  ext: 'css'  },
   ],
   py: [
-    { name: 'main.py', ext: 'py', content: '' },
-    { name: 'config.py', ext: 'py', content: '' },
-    { name: 'utils.py', ext: 'py', content: '' },
+    { name: 'main.py',   ext: 'py' },
+    { name: 'config.py', ext: 'py' },
+    { name: 'utils.py',  ext: 'py' },
   ],
   js: [
-    { name: 'index.js', ext: 'js', content: '' },
-    { name: 'store.js', ext: 'js', content: '' },
-    { name: 'config.json', ext: 'json', content: '' },
+    { name: 'index.js',    ext: 'js'   },
+    { name: 'store.js',    ext: 'js'   },
+    { name: 'config.json', ext: 'json' },
   ],
   rs: [
-    { name: 'main.rs', ext: 'rs', content: '' },
-    { name: 'router.rs', ext: 'rs', content: '' },
-    { name: 'Cargo.toml', ext: 'json', content: '' },
+    { name: 'main.rs',    ext: 'rs'   },
+    { name: 'router.rs',  ext: 'rs'   },
+    { name: 'Cargo.toml', ext: 'json' },
   ],
-  css: [{ name: 'styles.css', ext: 'css', content: '' }],
-  json: [{ name: 'config.json', ext: 'json', content: '' }],
+  css:  [{ name: 'styles.css',  ext: 'css'  }],
+  json: [{ name: 'config.json', ext: 'json' }],
 };
 
 export const SAMPLE_CODE: Record<string, string> = {
@@ -88,7 +110,6 @@ const fetchUsers = async (): Promise<User[]> => {
 
 export default function App() {
   const [users, setUsers] = useState<User[]>([])
-  // Załaduj użytkowników po zamontowaniu
   return <div>{users.map(u => u.name)}</div>
 }`,
   py: `from dataclasses import dataclass
@@ -116,7 +137,7 @@ const createStore = (reducer, initialState) => {
       state = reducer(state, action)
       listeners.forEach(l => l())
     },
-    subscribe: (fn) => listeners.push(fn)
+    subscribe: (fn) => listeners.push(fn),
   }
 }`,
   rs: `use std::collections::HashMap;
@@ -132,7 +153,7 @@ impl Router {
     }
 
     fn add_route(&mut self, path: &str, handler: &str) {
-        self.routes.insert(path.to_string(), handler.to_string())
+        self.routes.insert(path.to_string(), handler.to_string());
     }
 }`,
   css: `/* Główne style aplikacji */
