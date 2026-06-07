@@ -1,3 +1,4 @@
+// src/editor/viewmodels/useEditor.ts
 import { useState } from 'react';
 import { EditorState, ProjectFile } from '../model/EditorState';
 
@@ -22,19 +23,14 @@ export const useEditor = (initialFiles: ProjectFile[] = []) => {
     setState((prev) => {
       const newTabs = prev.openTabs.filter((t) => t.name !== fileName);
       const isActive = prev.activeFile?.name === fileName;
-      const newActive = isActive
-        ? newTabs[newTabs.length - 1] ?? null
-        : prev.activeFile;
+      const newActive = isActive ? newTabs[newTabs.length - 1] ?? null : prev.activeFile;
       return { openTabs: newTabs, activeFile: newActive };
     });
   };
 
   const reset = (files: ProjectFile[]) => {
     const first = files[0] ?? null;
-    setState({
-      activeFile: first,
-      openTabs: first ? [first] : [],
-    });
+    setState({ activeFile: first, openTabs: first ? [first] : [] });
   };
 
   return { state, openFile, closeTab, reset };

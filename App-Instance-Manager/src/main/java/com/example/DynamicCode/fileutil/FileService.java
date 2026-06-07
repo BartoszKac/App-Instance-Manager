@@ -52,7 +52,7 @@ public class FileService {
 
         for (SourceCode fileRequest : sourceCodes) {
             try {
-                Path filePath = Paths.get(CompileConstats.WORKING_DIR + "/" + uniquePath, fileRequest.getName());
+                Path filePath = Paths.get(CompileConstats.WORKING_DIR + "\\" + uniquePath, fileRequest.getName());
                 Files.writeString(filePath, fileRequest.getCode());
                 System.out.println("Zapisano plik na dysku: " + filePath.toAbsolutePath());
             } catch (IOException e) {
@@ -64,7 +64,7 @@ public class FileService {
 
     public List<CodeFileDto> readFilesFromDisk(String uniquePath) {
         List<CodeFileDto> compiledFiles = new ArrayList<>();
-        File workingDir = new File(CompileConstats.WORKING_DIR + "/" + uniquePath);
+        File workingDir = new File(CompileConstats.WORKING_DIR + "\\" + uniquePath);
 
         if (!workingDir.exists() || !workingDir.isDirectory()) {
             log.warn("Katalog roboczy nie istnieje lub nie jest folderem: {}/{}", CompileConstats.WORKING_DIR, uniquePath);

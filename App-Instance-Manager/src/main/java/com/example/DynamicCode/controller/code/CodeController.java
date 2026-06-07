@@ -29,6 +29,7 @@ public class CodeController {
 
     @PostMapping("/source")
     public ResponseEntity<String> saveSourceCodes(@RequestBody List<SourceCode> sourceCodes) {
+        System.out.println("Received source codes: " + sourceCodes);
         String path = providerCodeService.saveSourceCodeInSystem(sourceCodes);
         return ResponseEntity.ok(path);
     }
@@ -64,5 +65,20 @@ public class CodeController {
     public ResponseEntity<Void> deleteEntireProject(@PathVariable Long idMainClass) {
         providerCodeService.deleteEntireProjectByMainClass(idMainClass);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/source/all")
+    public ResponseEntity<List<SourceCode>> getAllSourceCode() {
+        return ResponseEntity.ok(providerCodeService.getAllSourceCodes());
+    }
+
+    @GetMapping("/source/main-class/all")
+    public ResponseEntity<List<SourceCode>> getAllMainClassSourceCodes() {
+        return ResponseEntity.ok(providerCodeService.getAllMainClassSourceCodes());
+    }
+
+    @PostMapping("/compile/all/main-class/{idMainClass}")
+    public ResponseEntity<String> compileAllFilesFromMainClass(@PathVariable Long idMainClass) {
+        return ResponseEntity.ok(providerCodeService.compileAllFilesFromMainClass(idMainClass));
     }
 }

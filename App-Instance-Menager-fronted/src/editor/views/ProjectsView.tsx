@@ -11,7 +11,7 @@ interface ProjectsViewProps {
 }
 
 export const ProjectsView: React.FC<ProjectsViewProps> = ({ onOpenProject, onDeploy, onExecution }) => {
-  const { filteredProjects, state, setFilter, setSearchQuery, createProject } = useProjects();
+  const { filteredProjects, state, setFilter, setSearchQuery, createProject, loading, error } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleCreate = (name: string, desc: string, lang: Language) => {
@@ -21,9 +21,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onOpenProject, onDep
 
   const filters: { label: string; value: Language | 'all' }[] = [
     { label: 'Wszystkie', value: 'all' },
-    { label: 'TypeScript', value: 'ts' },
-    { label: 'Python', value: 'py' },
-    { label: 'JavaScript', value: 'js' },
+    { label: 'Java',      value: 'java' },
+    { label: 'Python',    value: 'py' },
+    { label: 'C++',       value: 'cpp' },
+    { label: 'Bash',      value: 'sh' },
   ];
 
   return (
@@ -43,11 +44,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onOpenProject, onDep
           </div>
         }
         right={
-          <>
-            <button className="nav-btn primary" onClick={() => setIsModalOpen(true)}>
-              + Nowy projekt
-            </button>
-          </>
+          <button className="nav-btn primary" onClick={() => setIsModalOpen(true)}>
+            + Nowy projekt
+          </button>
         }
       />
 
@@ -59,13 +58,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onOpenProject, onDep
       <div className="projects-toolbar">
         <div className="search-box">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
           </svg>
-          <input
-            placeholder="Szukaj projektu..."
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          <input placeholder="Szukaj projektu..." onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
 
         <div className="filter-tabs">
@@ -89,6 +84,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onOpenProject, onDep
           Nowy projekt
         </button>
       </div>
+
+      {loading && <div className="loading-indicator">Ładowanie...</div>}
+      {error   && <div className="error-message">Błąd: {error}</div>}
 
       <div className="projects-grid">
         {filteredProjects.length === 0 ? (

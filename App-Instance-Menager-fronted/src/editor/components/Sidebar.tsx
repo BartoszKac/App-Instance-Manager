@@ -1,6 +1,6 @@
 // src/editor/components/Sidebar.tsx
 import React, { useState, useRef } from 'react';
-import { Project, ProjectFile } from '@/editor/model';
+import { Project, ProjectFile, EXT_TO_LANGUAGE } from '@/editor/model';
 
 interface SidebarProps {
   project: Project;
@@ -22,7 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleToggleAdd = () => {
-    setIsAdding((prev) => !prev);
+    setIsAdding(prev => !prev);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
@@ -31,8 +31,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (!val) return;
     const parts = val.split('.');
     const ext = parts.length > 1 ? parts[parts.length - 1] : 'txt';
-    // content: undefined — ?? w CodeView pokaże SAMPLE_CODE dla tego rozszerzenia
-    onFileAdd({ name: val, ext });
+    const language = EXT_TO_LANGUAGE[ext] ?? 'UNKNOWN';
+    onFileAdd({ id: 0, name: val, ext, content: '', language });
     setNewFileName('');
     setIsAdding(false);
   };
@@ -59,12 +59,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <span className={`file-icon file-ext-${file.ext}`}>.{file.ext}</span>
             <span className="file-name">{file.name}</span>
+            {(!file.id || file.id === 0) && (
+              <span style={{ fontSize: 9, color: 'var(--accent, #4f7ef7)', marginLeft: 2 }}>●</span>
+            )}
             <span
               className="file-remove"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFileRemove(file.name);
-              }}
+              onClick={(e) => { e.stopPropagation(); onFileRemove(file.name); }}
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -81,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="add-file-input"
             value={newFileName}
             onChange={(e) => setNewFileName(e.target.value)}
-            placeholder="np. index.ts"
+            placeholder="np. Main.java"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleConfirmAdd();
               if (e.key === 'Escape') setIsAdding(false);

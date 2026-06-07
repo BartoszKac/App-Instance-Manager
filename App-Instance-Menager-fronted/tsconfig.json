@@ -18,8 +18,8 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,        /* Zmieniono z true na false */
+    "noUnusedParameters": false,    /* Zmieniono z true na false */
     "noFallthroughCasesInSwitch": true,
 
     /* TUTAJ USTAWIANIE ALIASU */

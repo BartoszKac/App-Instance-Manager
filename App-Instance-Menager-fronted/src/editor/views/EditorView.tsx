@@ -1,7 +1,8 @@
 // src/editor/views/EditorView.tsx
-import React, { useMemo } from 'react';
-import { Project, ProjectFile, SAMPLE_CODE } from '@/editor/model';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { Project, ProjectFile, SourceCode, EXT_TO_LANGUAGE, LANGUAGE_TO_EXT } from '@/editor/model';
 import { useEditor } from '@/editor/viewmodels';
+import { CodeService } from '@/editor/components/CodeService';
 import { Topbar, Sidebar, TabBar, CodeView, StatusBar } from '@/editor/components';
 
 interface EditorViewProps {
@@ -12,45 +13,103 @@ interface EditorViewProps {
 }
 
 export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeploy, onExecution }) => {
-  const { state, openFile, closeTab } = useEditor(project.files);
+  const [files, setFiles]         = useState<ProjectFile[]>(project.files);
+  const [saving, setSaving]       = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [files, setFiles] = React.useState(project.files);
+  const { state, openFile, closeTab, reset } = useEditor(files);
+
+  const idManClass = project.id;
+
+  // Jeśli projekt pochodzi z backendu — załaduj aktualne pliki
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const sourceCodes = await CodeService.getSourceCodes(idManClass);
+        const loaded: ProjectFile[] = sourceCodes.map(sc => ({
+          id: sc.id,
+          name: sc.name,
+          ext: LANGUAGE_TO_EXT[sc.language] ?? 'java',
+          content: sc.code,
+          language: sc.language,
+        }));
+        setFiles(loaded);
+        reset(loaded);
+      } catch {
+        // Nowy projekt — zostają pliki z project.files
+      }
+    };
+    load();
+  }, [idManClass]);
 
   const activeFileWithContent = useMemo(() => {
     if (!state.activeFile) return null;
-    // Pobieramy plik z lokalnego stanu 'files', aby mieć aktualną treść podczas pisania
     return files.find(f => f.name === state.activeFile?.name) || state.activeFile;
   }, [state.activeFile, files]);
 
   const lineCount = useMemo(() => {
     if (!activeFileWithContent) return 0;
-    const code = activeFileWithContent.content || SAMPLE_CODE[activeFileWithContent.ext] || '';
-    return code.split('\n').length;
+    return (activeFileWithContent.content || '').split('\n').length;
   }, [activeFileWithContent]);
 
   const handleFileAdd = (file: ProjectFile) => {
-    setFiles((prev) => [...prev, file]);
+    setFiles(prev => [...prev, file]);
     openFile(file);
   };
 
   const handleFileRemove = (fileName: string) => {
-    setFiles((prev) => prev.filter((f) => f.name !== fileName));
+    setFiles(prev => prev.filter(f => f.name !== fileName));
     closeTab(fileName);
   };
 
   const handleContentChange = (newContent: string) => {
-    console.log('[EditorView] handleContentChange wywołane dla pliku:', state.activeFile?.name);
     if (!state.activeFile) return;
-    setFiles((prev) => {
-      const newFiles = prev.map((f) => (f.name === state.activeFile?.name ? { ...f, content: newContent } : f));
-      console.log('[EditorView] Nowy stan tablicy plików:', newFiles);
-      return newFiles;
-    });
+    setFiles(prev =>
+      prev.map(f => f.name === state.activeFile?.name ? { ...f, content: newContent } : f)
+    );
   };
 
-  const handleClearFile = () => {
-    handleContentChange('');
-  };
+  const handleClearFile = () => handleContentChange('');
+
+  const toSourceCode = (f: ProjectFile): SourceCode => ({
+    id: f.id,
+    idManClass,
+    name: f.name,
+    code: f.content || '',
+    language: f.language || EXT_TO_LANGUAGE[f.ext] || 'UNKNOWN',
+  });
+
+  // ── ZAPIS NA BACKEND ─────────────────────────────────────────────
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      const newFiles      = files.filter(f => f.id === 0);
+      const existingFiles = files.filter(f => f.id > 0);
+
+      // POST — nowe pliki
+      if (newFiles.length > 0) {
+        const payload = newFiles.map(toSourceCode);
+        await CodeService.saveSourceCodes(payload);
+        setFiles(prev => prev.map(f =>
+          f.id === 0 ? { ...f, id: idManClass } : f
+        ));
+      }
+
+      // PUT — istniejące pliki
+      for (const f of existingFiles) {
+        await CodeService.updateSourceCode(toSourceCode(f));
+      }
+
+      console.log('✅ Zapisano | idManClass:', idManClass);
+    } catch (err: any) {
+      setSaveError(err.message || 'Błąd zapisu');
+      console.error('❌', err);
+    } finally {
+      setSaving(false);
+    }
+  }, [files, idManClass]);
 
   const projectWithFiles = { ...project, files };
 
@@ -72,9 +131,14 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
         }
         right={
           <>
+            {saveError && (
+              <span style={{ color: 'var(--error, #f87171)', fontSize: 12 }}>{saveError}</span>
+            )}
             <button className="nav-btn secondary" onClick={handleClearFile}>Wyczyść</button>
             <button className="nav-btn secondary" onClick={onDeploy}>Uruchom</button>
-            <button className="nav-btn primary" onClick={() => console.log('Zapisywanie plików...', files)}>Zapisz</button>
+            <button className="nav-btn primary" onClick={handleSave} disabled={saving}>
+              {saving ? 'Zapisywanie...' : 'Zapisz'}
+            </button>
           </>
         }
       />
@@ -87,7 +151,6 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
           onFileRemove={handleFileRemove}
           onFileAdd={handleFileAdd}
         />
-
         <div className="editor-main">
           <TabBar
             tabs={state.openTabs}

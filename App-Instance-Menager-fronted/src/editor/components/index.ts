@@ -6,3 +6,4 @@ export * from './CodeView';
 export * from './ProjectCard';
 export * from './StatusBar';
 export * from './Topbar';
+export * from './CodeService';

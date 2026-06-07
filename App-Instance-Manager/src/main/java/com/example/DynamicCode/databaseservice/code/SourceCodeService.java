@@ -126,4 +126,16 @@ public class SourceCodeService implements DataBaseProvider<SourceCode> {
             return Collections.emptyList();
         }
     }
+    @Transactional(readOnly = true)
+    public List<SourceCode> getAllMainClassesFromDb() {
+        log.info("[SERWIS] Pobieram wyłącznie główne klasy projektów (gdzie id == idManClass).");
+        try {
+            List<SourceCode> mainClasses = codeRepository.getAllMainClass();
+            log.info("[SERWIS] Pomyślnie pobrano główne klasy. Znaleziono: {}", mainClasses.size());
+            return mainClasses;
+        } catch (Exception e) {
+            log.error("[SERWIS] Błąd podczas pobierania głównych klas projektów: ", e);
+            return Collections.emptyList();
+        }
+    }
 }

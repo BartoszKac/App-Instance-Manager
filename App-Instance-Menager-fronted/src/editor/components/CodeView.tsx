@@ -39,8 +39,7 @@ export const CodeView: React.FC<CodeViewProps> = ({ file, onContentChange }) => 
 
   const displayCode = useMemo(() => {
     if (!file) return '';
-    const content = file.content ?? SAMPLE_CODE[file.ext] ?? SAMPLE_CODE['ts'] ?? '';
-    return content;
+    const content = file.content ?? '';    return content;
   }, [file]);
 
   const lineCount = displayCode.split('\n').length;

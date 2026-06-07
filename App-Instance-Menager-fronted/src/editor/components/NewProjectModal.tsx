@@ -8,14 +8,10 @@ interface NewProjectModalProps {
   onCreate: (name: string, desc: string, lang: Language) => void;
 }
 
-export const NewProjectModal: React.FC<NewProjectModalProps> = ({
-  isOpen,
-  onClose,
-  onCreate,
-}) => {
+export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose, onCreate }) => {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
-  const [lang, setLang] = useState<Language>('ts');
+  const [lang, setLang] = useState<Language>('java');
 
   if (!isOpen) return null;
 
@@ -24,7 +20,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
     onCreate(name.trim(), desc.trim(), lang);
     setName('');
     setDesc('');
-    setLang('ts');
+    setLang('java');
     onClose();
   };
 
@@ -63,10 +59,10 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
             value={lang}
             onChange={(e) => setLang(e.target.value as Language)}
           >
-            <option value="ts">TypeScript</option>
+            <option value="java">Java</option>
             <option value="py">Python</option>
-            <option value="js">JavaScript</option>
-            <option value="rs">Rust</option>
+            <option value="cpp">C++</option>
+            <option value="sh">Bash</option>
           </select>
         </div>
 

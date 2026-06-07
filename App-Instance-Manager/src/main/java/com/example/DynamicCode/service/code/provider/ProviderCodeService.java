@@ -4,6 +4,7 @@ import com.example.DynamicCode.databaseservice.code.CompiledCodeService;
 import com.example.DynamicCode.databaseservice.code.SourceCodeService;
 import com.example.DynamicCode.model.entity.code.CompiledCode;
 import com.example.DynamicCode.model.entity.code.SourceCode;
+import com.example.DynamicCode.service.code.compilation.CompilationService;
 import com.example.DynamicCode.service.file.SavingDataInSystemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ public class ProviderCodeService {
     private final SourceCodeService sourceCodeService;
     private final CompiledCodeService compiledCodeService;
     private final SavingDataInSystemService savingDataInSystemService; // Wstrzykujemy Twój serwis dyskowy
+    private final CompilationService compilationService;
 
     // --- SEKCJA KODU ŹRÓDŁOWEGO (ZAPIS SYSTEMOWY I POBIERANIE) ---
 
@@ -85,5 +87,18 @@ public class ProviderCodeService {
         log.warn("[Provider] Kompleksowe usuwanie projektu z bazy dla idMainClass: {}", idMainClass);
         compiledCodeService.deleteAllFilesByMainClass(idMainClass);
         sourceCodeService.deleteAllFilesByMainClass(idMainClass);
+    }
+    public List<SourceCode> getAllSourceCodes() {
+        log.info("[Provider] Pobieranie wszystkich kodów źródłowych z bazy.");
+        return sourceCodeService.getAllFilesFromMainClass();
+    }
+    public List<SourceCode> getAllMainClassSourceCodes() {
+        log.info("[Provider] Pobieranie kodów źródłowych dla wszystkich głównych klas z bazy.");
+        return sourceCodeService.getAllMainClassesFromDb();
+    }
+    public String compileAllFilesFromMainClass(Long idMainClass) {
+        log.info("[Provider] Wywołanie kompilacji dla idMainClass: {}", idMainClass);
+        compilationService.compileAllFilesFromMainClass(idMainClass);
+        return "Kompilacja uruchomiona dla idMainClass: " + idMainClass;
     }
 }
