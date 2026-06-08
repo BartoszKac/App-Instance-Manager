@@ -54,7 +54,7 @@ public class CompilationService {
             }
 
             log.info("Kompilacja sukces! Zapisywanie wyników...");
-            savingDataInSystemService.handleCompilationResult(idMainClass, sourceCodes);
+            savingDataInSystemService.handleCompilationResult(idMainClass);
 
         } catch (Exception e) {
             log.error("Błąd krytyczny podczas kompilacji dla idMainClass: {}", idMainClass, e);

@@ -2,6 +2,7 @@ package com.example.DynamicCode.service.code.launcher;
 
 import com.example.DynamicCode.databaseservice.code.SourceCodeService;
 import com.example.DynamicCode.databaseservice.file.CompileFolderInTheDiskService;
+import com.example.DynamicCode.databaseservice.file.SourceFolderInTheDiskService;
 import com.example.DynamicCode.factory.code.langugage.LanguageHandlerFactory;
 import com.example.DynamicCode.model.entity.code.SourceCode;
 import com.example.DynamicCode.service.code.prcoces.LanguageProces;
@@ -20,7 +21,7 @@ public class AppLauncherService {
     private final LanguageHandlerFactory languageHandlerFactory;
     private final SourceCodeService sourceCodeService;
     private final LanguageProces languageProces;
-    private final CompileFolderInTheDiskService compileFolderInTheDiskService;
+    private final SourceFolderInTheDiskService sourceFolderInTheDiskService;
      ;
 
     public String launchApp(Long idMainClass) {
@@ -42,7 +43,7 @@ public class AppLauncherService {
 
             List<String> runCommand = handler.getRunCommand(mainFileName);
             log.info("Uruchamiam aplikację przez LanguageProces: {}", runCommand);
-            String folderPath = compileFolderInTheDiskService.getFoldersFromCompiledCodeId(idMainClass).getPath();
+            String folderPath = sourceFolderInTheDiskService.getFoldersFromSourceCodeId(idMainClass).getPath();
             int runExitCode = languageProces.runProcessInDirectory(runCommand, "[URUCHOMIENIE]",folderPath);
             log.info("Aplikacja zakończyła działanie z kodem: {}", runExitCode);
 

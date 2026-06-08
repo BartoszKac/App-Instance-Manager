@@ -2,9 +2,12 @@ package com.example.DynamicCode.service.code.provider;
 
 import com.example.DynamicCode.databaseservice.code.CompiledCodeService;
 import com.example.DynamicCode.databaseservice.code.SourceCodeService;
+import com.example.DynamicCode.databaseservice.file.SourceFolderInTheDiskService;
 import com.example.DynamicCode.model.entity.code.CompiledCode;
 import com.example.DynamicCode.model.entity.code.SourceCode;
+import com.example.DynamicCode.model.entity.file.SourceFolderInTheDisk;
 import com.example.DynamicCode.service.code.compilation.CompilationService;
+import com.example.DynamicCode.service.code.launcher.AppLauncherService;
 import com.example.DynamicCode.service.file.SavingDataInSystemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +24,8 @@ public class ProviderCodeService {
     private final CompiledCodeService compiledCodeService;
     private final SavingDataInSystemService savingDataInSystemService; // Wstrzykujemy Twój serwis dyskowy
     private final CompilationService compilationService;
+    private final SourceFolderInTheDiskService sourceFolderInTheDiskService;
+    private final AppLauncherService appLauncherService;
 
     // --- SEKCJA KODU ŹRÓDŁOWEGO (ZAPIS SYSTEMOWY I POBIERANIE) ---
 
@@ -30,6 +35,16 @@ public class ProviderCodeService {
     public List<SourceCode> getSourceCodesByMainClass(Long idMainClass) {
         log.info("[Provider] Pobieranie kodu źródłowego z bazy dla idMainClass: {}", idMainClass);
         return sourceCodeService.getAllFilesFromMainClass(idMainClass);
+    }
+
+    /**
+     * Uruchamia aplikację na podstawie głównej klasy (idMainClass).
+     * Pobiera potrzebne dane, generuje komendy i uruchamia proces.
+     * * @return Zwraca komunikat o sukcesie lub błędzie uruchomienia.
+     */
+    public String launchApp(Long idMainClass) {
+        log.info("[Provider] Wywołanie uruchomienia aplikacji dla idMainClass: {}", idMainClass);
+        return appLauncherService.launchApp(idMainClass);
     }
 
     /**
@@ -52,22 +67,6 @@ public class ProviderCodeService {
 
     // --- SEKCJA KOMPILACJI (PROCESOWANIE I REZULTATY) ---
 
-    /**
-     * Wywoływane, gdy proces kompilacji się zakończy.
-     * Odczytuje pliki z dysku, mapuje je i zapisuje struktury skompilowane.
-     */
-    public void processAndHandleCompilationResult(Long idMainClass, List<SourceCode> sourceFiles) {
-        log.info("[Provider] Przetwarzanie wyniku kompilacji dla idMainClass: {}", idMainClass);
-        savingDataInSystemService.handleCompilationResult(idMainClass, sourceFiles);
-    }
-
-    /**
-     * Bezpośredni zapis skompilowanego kodu (jeśli front-end wysyła gotowy bytecode).
-     */
-    public String saveCompiledCodeInSystem(List<SourceCode> compiledCodes) {
-        log.info("[Provider] Wywołanie zapisu skompilowanych plików w systemie.");
-        return savingDataInSystemService.SaveCompiledCodeIntheSystem(compiledCodes);
-    }
 
     /**
      * Pobiera skompilowane pliki z bazy (np. przed uruchomieniem aplikacji).
@@ -100,5 +99,10 @@ public class ProviderCodeService {
         log.info("[Provider] Wywołanie kompilacji dla idMainClass: {}", idMainClass);
         compilationService.compileAllFilesFromMainClass(idMainClass);
         return "Kompilacja uruchomiona dla idMainClass: " + idMainClass;
+    }
+
+    public List<SourceFolderInTheDisk> getAllSourceFolders() {
+        log.info("[Provider] Pobieranie wszystkich folderów źródłowych z bazy.");
+        return sourceFolderInTheDiskService.getAllFolders();
     }
 }
