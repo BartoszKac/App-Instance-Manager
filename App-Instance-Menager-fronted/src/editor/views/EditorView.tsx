@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { Project, ProjectFile, SourceCode, CompiledCode, EXT_TO_LANGUAGE, LANGUAGE_TO_EXT } from '@/editor/model';
 import { useEditor } from '@/editor/viewmodels';
-import { CodeService } from '@/editor/components/CodeService';
+import { CodeService } from '@/editor/api/CodeService';
 import { Topbar, Sidebar, TabBar, CodeView, StatusBar } from '@/editor/components';
 
 interface EditorViewProps {
@@ -14,16 +14,30 @@ interface EditorViewProps {
 
 type CompileStatus = 'idle' | 'compiling' | 'success' | 'error';
 
+// Języki które NIE wymagają kompilacji — Run dostępny od razu po zapisie
+const INTERPRETED_LANGS = new Set(['py', 'sh']);
+
 export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeploy, onExecution }) => {
-  const [files, setFiles]             = useState<ProjectFile[]>(project.files);
-  const [saving, setSaving]           = useState(false);
-  const [saveError, setSaveError]     = useState<string | null>(null);
+  const [files, setFiles]                 = useState<ProjectFile[]>(project.files);
+  const [saving, setSaving]               = useState(false);
+  const [saved, setSaved]                 = useState(false);  // czy zapisano po raz pierwszy
+  const [saveError, setSaveError]         = useState<string | null>(null);
   const [compileStatus, setCompileStatus] = useState<CompileStatus>('idle');
-  const [compileMsg, setCompileMsg]   = useState<string | null>(null);
-  const [compiledCodes, setCompiledCodes] = useState<CompiledCode[]>([]);
+  const [compileMsg, setCompileMsg]       = useState<string | null>(null);
+  const [runMsg, setRunMsg]               = useState<string | null>(null);
+  const [running, setRunning]             = useState(false);
 
   const { state, openFile, closeTab, reset } = useEditor(project.files);
   const idManClass = project.id;
+
+  // Czy język wymaga kompilacji
+  const needsCompile = !INTERPRETED_LANGS.has(project.lang);
+
+  // Czy przycisk Run ma być widoczny
+  const showRun =
+    needsCompile
+      ? compileStatus === 'success'   // Java/C++ — po udanej kompilacji
+      : saved;                         // Python/Bash — po zapisie
 
   useEffect(() => {
     const load = async () => {
@@ -39,6 +53,7 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
           }));
           setFiles(loaded);
           reset(loaded);
+          setSaved(true); // pliki już istnieją na backendzie
         } else {
           setFiles(project.files);
           reset(project.files);
@@ -92,9 +107,10 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
   const handleSave = useCallback(async () => {
     setSaving(true);
     setSaveError(null);
+    setRunMsg(null);
     try {
-      const payload = files.map(toSourceCode);
-      await CodeService.saveSourceCodes(payload);
+      await CodeService.saveSourceCodes(files.map(toSourceCode));
+      setSaved(true);
       console.log('✅ Zapisano | idManClass:', idManClass);
     } catch (err: any) {
       setSaveError(err.message || 'Błąd zapisu');
@@ -103,22 +119,14 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
     }
   }, [files, idManClass]);
 
-  // ── KOMPILACJA ───────────────────────────────────────────────────
+  // ── KOMPILACJA (tylko Java/C++) ──────────────────────────────────
   const handleCompile = useCallback(async () => {
     setCompileStatus('compiling');
     setCompileMsg(null);
-    setCompiledCodes([]);
-
+    setRunMsg(null);
     try {
-      // 1. Uruchom kompilację
-      const msg = await CodeService.compileAll(idManClass);
-      console.log('Kompilacja odpowiedź:', msg);
-
-      // 2. Pobierz wyniki
+      await CodeService.compileAll(idManClass);
       const results = await CodeService.getCompiledCodes(idManClass);
-      setCompiledCodes(results);
-
-      // Sukces jeśli żaden plik nie ma statusu error
       const hasError = results.some(r => r.status === 'error');
       if (hasError) {
         setCompileStatus('error');
@@ -133,18 +141,26 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
     }
   }, [idManClass]);
 
-  // ── RUN (na razie puste) ─────────────────────────────────────────
-  const handleRun = useCallback(() => {
-    console.log('Run | idManClass:', idManClass, '| compiled:', compiledCodes);
-    // TODO: podłączyć endpoint uruchamiania
-  }, [idManClass, compiledCodes]);
+  // ── RUN ──────────────────────────────────────────────────────────
+  const handleRun = useCallback(async () => {
+    setRunning(true);
+    setRunMsg(null);
+    try {
+      const result = await CodeService.launchApp(idManClass);
+      setRunMsg(result || 'Aplikacja uruchomiona');
+      console.log('▶ Run wynik:', result);
+    } catch (err: any) {
+      setRunMsg(err.message || 'Błąd uruchamiania');
+    } finally {
+      setRunning(false);
+    }
+  }, [idManClass]);
 
   const projectWithFiles = { ...project, files };
 
   const compileColor =
     compileStatus === 'success' ? '#4ade80' :
-    compileStatus === 'error'   ? '#f87171' :
-    'var(--text3)';
+    compileStatus === 'error'   ? '#f87171' : 'var(--text3)';
 
   return (
     <div className="screen-editor">
@@ -164,41 +180,38 @@ export const EditorView: React.FC<EditorViewProps> = ({ project, onBack, onDeplo
         }
         right={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Status kompilacji */}
-            {compileMsg && (
-              <span style={{ fontSize: 11, color: compileColor }}>{compileMsg}</span>
-            )}
-            {saveError && (
-              <span style={{ fontSize: 11, color: '#f87171' }}>{saveError}</span>
-            )}
+            {/* Komunikaty */}
+            {saveError  && <span style={{ fontSize: 11, color: '#f87171' }}>{saveError}</span>}
+            {compileMsg && <span style={{ fontSize: 11, color: compileColor }}>{compileMsg}</span>}
+            {runMsg     && <span style={{ fontSize: 11, color: '#4ade80' }}>{runMsg}</span>}
 
             <button className="nav-btn secondary" onClick={handleClearFile}>Wyczyść</button>
 
-            <button
-              className="nav-btn primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
+            {/* Zapisz */}
+            <button className="nav-btn primary" onClick={handleSave} disabled={saving}>
               {saving ? 'Zapisywanie...' : 'Zapisz'}
             </button>
 
-            <button
-              className="nav-btn secondary"
-              onClick={handleCompile}
-              disabled={compileStatus === 'compiling'}
-              style={{ minWidth: 90 }}
-            >
-              {compileStatus === 'compiling' ? 'Kompilowanie...' : '⚙ Kompiluj'}
-            </button>
+            {/* Kompiluj — tylko dla Java/C++ */}
+            {needsCompile && (
+              <button
+                className="nav-btn secondary"
+                onClick={handleCompile}
+                disabled={compileStatus === 'compiling'}
+              >
+                {compileStatus === 'compiling' ? 'Kompilowanie...' : '⚙ Kompiluj'}
+              </button>
+            )}
 
-            {/* Run pojawia się tylko po udanej kompilacji */}
-            {compileStatus === 'success' && (
+            {/* Run — po kompilacji (Java/C++) lub po zapisie (Python/Bash) */}
+            {showRun && (
               <button
                 className="nav-btn primary"
                 onClick={handleRun}
+                disabled={running}
                 style={{ background: '#4ade80', color: '#0f1117' }}
               >
-                ▶ Run
+                {running ? 'Uruchamianie...' : '▶ Run'}
               </button>
             )}
           </div>

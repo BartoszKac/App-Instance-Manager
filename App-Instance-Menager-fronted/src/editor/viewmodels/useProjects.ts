@@ -10,7 +10,7 @@ import {
   LANGUAGE_TO_EXT,
   SourceCode,
 } from '../model/EditorState';
-import { CodeService } from '../components/CodeService';
+import { CodeService } from '../api/CodeService';
 
 // Lokalny licznik — używany tylko dla nowo tworzonych projektów (jeszcze nie zapisanych)
 let nextIdManClass = 1000;

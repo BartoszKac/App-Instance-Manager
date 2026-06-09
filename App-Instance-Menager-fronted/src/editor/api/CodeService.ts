@@ -26,7 +26,6 @@ export const CodeService = {
     if (!res.ok) throw new Error('Błąd podczas zapisywania kodu');
   },
 
-  // Uruchamia kompilację wszystkich plików projektu
   async compileAll(idManClass: number): Promise<string> {
     const res = await fetch(`${API_BASE_URL}/compile/all/main-class/${idManClass}`, {
       method: 'POST',
@@ -35,11 +34,19 @@ export const CodeService = {
     return res.text();
   },
 
-  // Pobiera wyniki kompilacji
   async getCompiledCodes(idManClass: number): Promise<CompiledCode[]> {
     const res = await fetch(`${API_BASE_URL}/compiled/main-class/${idManClass}`);
     if (!res.ok) throw new Error('Nie udało się pobrać wyników kompilacji');
     return res.json();
+  },
+
+  // Uruchamia aplikację — działa dla wszystkich języków
+  async launchApp(idManClass: number): Promise<string> {
+    const res = await fetch(`${API_BASE_URL}/launch/main-class/${idManClass}`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Błąd podczas uruchamiania aplikacji');
+    return res.text();
   },
 
   async deleteEntireProject(idManClass: number): Promise<void> {
