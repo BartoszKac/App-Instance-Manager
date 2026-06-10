@@ -8,6 +8,15 @@ export interface ProgramConfig {
   idCode: number;
 }
 
+export interface ServerConfig {
+  idConfiguration: number;
+  name: string;
+  ip: string;
+  user: string;
+  pass: string;
+  operationSystem: string;
+}
+
 export interface DeployedInstance {
   id: string;
   idConfiguration: number;
@@ -33,8 +42,14 @@ export function mkLine(text: string, type: TerminalLineType): TerminalLine {
 
 export function inferLang(path: string): string {
   if (path.endsWith('.java') || path.includes('/java/')) return 'java';
-  if (path.endsWith('.py'))                               return 'py';
-  if (path.endsWith('.ts') || path.endsWith('.js'))       return 'ts';
+  if (path.endsWith('.py'))   return 'py';
+  if (path.endsWith('.ts'))   return 'ts';
+  if (path.endsWith('.js'))   return 'js';
+  if (path.endsWith('.cpp') || path.endsWith('.cc') || path.endsWith('.cxx')) return 'cpp';
+  if (path.endsWith('.c'))    return 'c';
+  if (path.endsWith('.go'))   return 'go';
+  if (path.endsWith('.rs'))   return 'rs';
+  if (path.endsWith('.sh'))   return 'sh';
   return 'sh';
 }
 
@@ -43,12 +58,16 @@ export function inferFileName(path: string): string {
   return parts[parts.length - 1] ?? path;
 }
 
-export function mapConfigToInstance(cfg: ProgramConfig): DeployedInstance {
+export function mapConfigToInstance(
+  cfg: ProgramConfig,
+  servers: ServerConfig[]
+): DeployedInstance {
+  const server = servers.find((s) => s.idConfiguration === cfg.idSerwer);
   return {
     id:              String(cfg.idConfiguration),
     idConfiguration: cfg.idConfiguration,
     fileName:        inferFileName(cfg.pathInServer),
-    serverName:      `Server #${cfg.idSerwer}`,
+    serverName:      server?.name ?? `Server #${cfg.idSerwer}`,
     path:            cfg.pathInServer,
     lang:            inferLang(cfg.pathInServer),
     status:          'online',

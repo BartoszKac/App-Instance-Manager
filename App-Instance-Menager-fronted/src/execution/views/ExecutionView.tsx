@@ -1,5 +1,5 @@
 // src/execution/views/ExecutionView.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Topbar } from '@/editor/components';
 import { useExecutionViewModel } from '@/execution/viewmodels/useExecutionViewModel';
 import { DeployedInstance } from '@/execution/model/ExecutionModel';
@@ -15,42 +15,79 @@ interface Preset {
   cmd: (inst: DeployedInstance) => string;
 }
 
-const PRESETS: Record<string, Preset[]> = {
-  java: [
-    { label: 'javac',     cmd: (i) => `javac ${i.fileName}` },
-    { label: 'java run',  cmd: (i) => `java ${i.fileName.replace('.java', '')}` },
-    { label: 'java -jar', cmd: (i) => `java -jar ${i.fileName.replace('.java', '.jar')}` },
-    { label: 'ls',        cmd: () => 'ls -la' },
-    { label: 'rm .class', cmd: (i) => `rm -f ${i.fileName.replace('.java', '.class')}` },
-  ],
-  py: [
-    { label: 'python3',    cmd: (i) => `python3 ${i.fileName}` },
-    { label: 'pip install',cmd: () => 'pip3 install -r requirements.txt' },
-    { label: 'ls',         cmd: () => 'ls -la' },
-    { label: 'rm .pyc',    cmd: (i) => `rm -f ${i.fileName.replace('.py', '.pyc')}` },
-  ],
-  ts: [
-    { label: 'ts-node',  cmd: (i) => `npx ts-node ${i.fileName}` },
-    { label: 'tsc',      cmd: (i) => `npx tsc ${i.fileName}` },
-    { label: 'node run', cmd: (i) => `node ${i.fileName.replace('.ts', '.js')}` },
-    { label: 'ls',       cmd: () => 'ls -la' },
-  ],
-  sh: [
-    { label: 'ls',  cmd: () => 'ls -la' },
-    { label: 'pwd', cmd: () => 'pwd' },
-    { label: 'df',  cmd: () => 'df -h' },
-  ],
-};
+interface PresetGroup {
+  group: string;
+  items: Preset[];
+}
+
+const PRESET_GROUPS: PresetGroup[] = [
+  {
+    group: 'Java',
+    items: [
+      { label: 'javac',        cmd: (i) => `javac ${i.fileName}` },
+      { label: 'java run',     cmd: (i) => `java ${i.fileName.replace('.java', '')}` },
+      { label: 'java -jar',    cmd: (i) => `java -jar ${i.fileName.replace('.java', '.jar')}` },
+      { label: 'mvn package',  cmd: () =>  'mvn clean package' },
+      { label: 'mvn run',      cmd: () =>  'mvn spring-boot:run' },
+      { label: 'gradle build', cmd: () =>  './gradlew build' },
+      { label: 'gradle run',   cmd: () =>  './gradlew run' },
+      { label: 'rm .class',    cmd: (i) => `rm -f ${i.fileName.replace('.java', '.class')}` },
+    ],
+  },
+  {
+    group: 'Python',
+    items: [
+      { label: 'python3',       cmd: (i) => `python3 ${i.fileName}` },
+      { label: 'python',        cmd: (i) => `python ${i.fileName}` },
+      { label: 'pip install',   cmd: () =>  'pip3 install -r requirements.txt' },
+      { label: 'venv create',   cmd: () =>  'python3 -m venv venv' },
+      { label: 'venv activate', cmd: () =>  'source venv/bin/activate' },
+      { label: 'pytest',        cmd: () =>  'pytest' },
+      { label: 'rm .pyc',       cmd: (i) => `rm -f ${i.fileName.replace('.py', '.pyc')}` },
+    ],
+  },
+  {
+    group: 'Node / TS',
+    items: [
+      { label: 'ts-node',    cmd: (i) => `npx ts-node ${i.fileName}` },
+      { label: 'tsc',        cmd: (i) => `npx tsc ${i.fileName}` },
+      { label: 'node run',   cmd: (i) => `node ${i.fileName}` },
+      { label: 'npm start',  cmd: () =>  'npm start' },
+      { label: 'npm build',  cmd: () =>  'npm run build' },
+      { label: 'npm install',cmd: () =>  'npm install' },
+      { label: 'npm test',   cmd: () =>  'npm test' },
+    ],
+  },
+  {
+    group: 'C / C++',
+    items: [
+      { label: 'gcc',        cmd: (i) => `gcc -o ${i.fileName.replace(/\.[^.]+$/, '')} ${i.fileName}` },
+      { label: 'g++',        cmd: (i) => `g++ -o ${i.fileName.replace(/\.[^.]+$/, '')} ${i.fileName}` },
+      { label: 'run binary', cmd: (i) => `./${i.fileName.replace(/\.[^.]+$/, '')}` },
+      { label: 'make',       cmd: () =>  'make' },
+      { label: 'make clean', cmd: () =>  'make clean' },
+    ],
+  },
+  {
+    group: 'System',
+    items: [
+      { label: 'ls',    cmd: () => 'ls -la' },
+      { label: 'pwd',   cmd: () => 'pwd' },
+      { label: 'df',    cmd: () => 'df -h' },
+      { label: 'ps',    cmd: () => 'ps aux' },
+      { label: 'top',   cmd: () => 'top -bn1 | head -20' },
+      { label: 'free',  cmd: () => 'free -h' },
+      { label: 'mkdir', cmd: () => 'mkdir -p ' },
+      { label: 'rm -f', cmd: () => 'rm -f ' },
+    ],
+  },
+];
 
 export const ExecutionView: React.FC<ExecutionViewProps> = ({ onProjects, onDeploy }) => {
   const vm = useExecutionViewModel();
   const [customCommands, setCustomCommands] = useState<Record<string, string>>({});
   const [openPresets, setOpenPresets]       = useState<Record<string, boolean>>({});
-  const terminalEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [vm.terminalLines]);
+  const [activeGroup, setActiveGroup]       = useState<Record<string, string>>({});
 
   const handleCmdChange = (id: string, val: string) => {
     setCustomCommands(prev => ({ ...prev, [id]: val }));
@@ -63,7 +100,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ onProjects, onDepl
   };
 
   const handlePreset = (inst: DeployedInstance, cmd: string) => {
-    vm.executeCommand(inst.idConfiguration, cmd);
+    setCustomCommands(prev => ({ ...prev, [inst.id]: cmd }));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, inst: DeployedInstance) => {
@@ -74,14 +111,6 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ onProjects, onDepl
     setOpenPresets(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const lineColor = (type: string) => {
-    switch (type) {
-      case 'command': return '#eee';
-      case 'success': return 'var(--green, #4caf50)';
-      case 'error':   return 'var(--red, #f44336)';
-      default:        return 'var(--text3, #666)';
-    }
-  };
 
   return (
     <div className="screen-execution">
@@ -136,24 +165,23 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ onProjects, onDepl
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
               {vm.instances.map((inst: DeployedInstance) => {
-                const presets = PRESETS[inst.lang] ?? PRESETS.sh;
-                const isOpen  = openPresets[inst.id] ?? false;
+                const isOpen = openPresets[inst.id] ?? false;
 
                 return (
                   <div key={inst.id} className="instance-card">
                     {/* Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <StatusDot status={inst.status} />
-                          <span style={{ fontWeight: 600 }}>{inst.fileName}</span>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: '12px' }}>
+                            <span style={{ color: 'var(--text2)', fontWeight: 600 }}>{inst.serverName}</span>
+                            <span style={{ margin: '0 4px', opacity: 0.4 }}>:</span>
+                            <span style={{ color: 'var(--text3)' }}>{inst.path}</span>
+                          </span>
                           <span style={{ fontSize: '10px', color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
                             #{inst.idConfiguration}
                           </span>
-                        </div>
-                        <div className="instance-path">
-                          Serwer: {inst.serverName}<br />
-                          Katalog: {inst.path}
                         </div>
                       </div>
                       <LangBadge lang={inst.lang} />
@@ -177,7 +205,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ onProjects, onDepl
                       </button>
                     </div>
 
-                    {/* Presety — toggle */}
+                    {/* Presety — grupy */}
                     <div style={{ marginTop: '10px' }}>
                       <button
                         onClick={() => togglePresets(inst.id)}
@@ -200,24 +228,52 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ onProjects, onDepl
                       </button>
 
                       {isOpen && (
-                        <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {presets.map((p) => (
+                        <div style={{ marginTop: '8px' }}>
+                          {/* Zakładki grup */}
+                          <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                            {PRESET_GROUPS.map((g) => (
+                              <button
+                                key={g.group}
+                                onClick={() => setActiveGroup(prev => ({ ...prev, [inst.id]: g.group }))}
+                                style={{
+                                  fontSize: '10px',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  border: '1px solid var(--border)',
+                                  cursor: 'pointer',
+                                  fontFamily: 'var(--mono)',
+                                  background: (activeGroup[inst.id] ?? PRESET_GROUPS[0].group) === g.group
+                                    ? 'var(--accent, #3b82f6)' : 'transparent',
+                                  color: (activeGroup[inst.id] ?? PRESET_GROUPS[0].group) === g.group
+                                    ? '#fff' : 'var(--text2)',
+                                }}
+                              >
+                                {g.group}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Przyciski aktywnej grupy */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {(PRESET_GROUPS.find(g => g.group === (activeGroup[inst.id] ?? PRESET_GROUPS[0].group))?.items ?? [])
+                              .map((p) => (
+                                <button
+                                  key={p.label}
+                                  className="preset-btn"
+                                  onClick={() => handlePreset(inst, p.cmd(inst))}
+                                  title={p.cmd(inst)}
+                                >
+                                  {p.label}
+                                </button>
+                              ))}
                             <button
-                              key={p.label}
                               className="preset-btn"
-                              onClick={() => handlePreset(inst, p.cmd(inst))}
-                              title={p.cmd(inst)}
+                              style={{ marginLeft: 'auto', borderColor: 'var(--red)', color: 'var(--red)' }}
+                              onClick={() => handlePreset(inst, `kill $(lsof -t -i)`)}
                             >
-                              {p.label}
+                              Kill
                             </button>
-                          ))}
-                          <button
-                            className="preset-btn"
-                            style={{ marginLeft: 'auto', borderColor: 'var(--red)', color: 'var(--red)' }}
-                            onClick={() => handlePreset(inst, `kill $(lsof -t -i)`)}
-                          >
-                            Kill
-                          </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -228,49 +284,7 @@ export const ExecutionView: React.FC<ExecutionViewProps> = ({ onProjects, onDepl
           )}
         </main>
 
-        {/* Terminal */}
-        <aside style={{
-          width: '350px',
-          background: '#000',
-          borderLeft: '1px solid var(--border)',
-          padding: '15px',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <div style={{ color: 'var(--green)', fontFamily: 'var(--mono)', fontSize: '11px', opacity: 0.7 }}>
-              TERMINAL OUTPUT
-            </div>
-            <button
-              onClick={vm.clearTerminal}
-              style={{
-                background: 'transparent',
-                border: '1px solid #333',
-                color: '#666',
-                fontFamily: 'var(--mono)',
-                fontSize: '10px',
-                padding: '2px 7px',
-                borderRadius: '3px',
-                cursor: 'pointer',
-              }}
-            >
-              clear
-            </button>
-          </div>
 
-          <div style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: '12px', overflowY: 'auto' }}>
-            {vm.terminalLines.map(line => (
-              <div
-                key={line.id}
-                style={{ color: lineColor(line.type), lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
-              >
-                {line.text}
-              </div>
-            ))}
-            <div ref={terminalEndRef} />
-            <span className="terminal-cursor" />
-          </div>
-        </aside>
       </div>
     </div>
   );

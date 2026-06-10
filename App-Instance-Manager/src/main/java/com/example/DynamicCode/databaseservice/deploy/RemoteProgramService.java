@@ -23,10 +23,25 @@ public class RemoteProgramService {
     @Transactional
     public String saveAllConfigurationsToDb(List<RemoteProgramConfiguration> configsFromRequest) {
         try {
-            log.info("Rozpoczynam zapis {} konfiguracji programów do bazy...", configsFromRequest.size());
+            log.info("Rozpoczynam zapis/aktualizację {} konfiguracji do bazy...", configsFromRequest.size());
+
+            for (RemoteProgramConfiguration incomingConfig : configsFromRequest) {
+                // Szukamy po idCode ORAZ uploadStrategyType
+                repository.findByIdCodeAndUploadStrategyType(
+                        incomingConfig.getIdCode(),
+                        incomingConfig.getUploadStrategyType()
+                ).ifPresent(existingConfig -> {
+                    // Jeśli znaleźliśmy IDENTYCZNĄ parę (idCode + strategia),
+                    // przepisujemy ID klucza głównego, aby Hibernate zrobił UPDATE
+                    incomingConfig.setIdConfiguration(existingConfig.getIdConfiguration());
+                });
+            }
+
+            // saveAll zrobi UPDATE dla pasujących par, a dla nowych (inny idCode lub inna strategia) zrobi INSERT
             repository.saveAll(configsFromRequest);
-            log.info("Konfiguracje zostały pomyślnie zapisane!");
-            return "All configurations saved to DB successfully!";
+
+            log.info("Konfiguracje zostały pomyślnie zapisane/zaktualizowane!");
+            return "All configurations updated or saved to DB successfully!";
         } catch (Exception e) {
             log.error("Błąd podczas zapisu konfiguracji do bazy. Powód: {}", e.getMessage(), e);
             throw new RuntimeException("Error saving configurations to DB: " + e.getMessage(), e);

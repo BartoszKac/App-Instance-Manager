@@ -4,6 +4,7 @@ import com.example.DynamicCode.databaseservice.deploy.RemoteProgramService;
 import com.example.DynamicCode.databaseservice.deploy.RemoteSerwerService;
 import com.example.DynamicCode.model.entity.deploy.RemoteProgramConfiguration;
 import com.example.DynamicCode.model.entity.deploy.RemoteSerwerConfiguration;
+import com.example.DynamicCode.notification.FrontendNotificationService;
 import com.example.DynamicCode.service.deploy.connection.SshSessionFactory; // Import Twojej klasy SSH
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class ExecutionService {
     private final RemoteSerwerService remoteSerwerService;
     private final RemoteProgramService remoteProgramService;
     private final SshSessionFactory sshSessionFactory;
+    private final FrontendNotificationService frontendNotificationService;;
 
     public String executeCommandOnRemoteServer(String command, Long programConfigId) {
         try {
@@ -37,7 +39,7 @@ public class ExecutionService {
                     serwerConfig.getPass(),
                     fullCommand
             );
-
+            frontendNotificationService.sendToFrontend(result);
             return result;
 
         } catch (Exception e) {
