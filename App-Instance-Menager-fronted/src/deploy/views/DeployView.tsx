@@ -30,12 +30,22 @@ export const DeployView: React.FC<DeployViewProps> = ({ onBack, onExecution }) =
         }
         right={
           <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-            <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
-              {vm.selectedFilesList.length} pliki · {vm.selectedServersList.length} serwery
-            </span>
+            {vm.loading ? (
+              <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+                <span className="deploy-spinner" style={{ marginRight: 4 }} />
+                Ładowanie…
+              </span>
+            ) : (
+              <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+                {vm.selectedFilesList.length} pliki · {vm.selectedServersList.length} serwery
+              </span>
+            )}
             <div className="status-item" style={{ fontSize: 11, fontFamily: 'var(--mono)' }}>
-              <div className="status-dot" style={{ background: '#22c55e' }} />
-              <span>Ready</span>
+              <div
+                className="status-dot"
+                style={{ background: vm.loadError ? '#ef4444' : '#22c55e' }}
+              />
+              <span>{vm.loadError ? 'Błąd' : 'Ready'}</span>
             </div>
           </div>
         }
@@ -52,13 +62,12 @@ export const DeployView: React.FC<DeployViewProps> = ({ onBack, onExecution }) =
       <div className="statusbar">
         <div className="status-item">
           <div className="status-dot" />
-          Gotowy
+          {vm.deploying ? 'Deploying…' : vm.deployDone ? 'Gotowe' : 'Gotowy'}
         </div>
         <span>SSH · Deploy Mode</span>
         <div className="status-spacer" />
-        <span>
-          {vm.allServers.filter((s) => s.status === 'online').length}/{vm.allServers.length} online
-        </span>
+        <span>{vm.allServers.length} serwerów</span>
+        <span>· {vm.files.length} plików</span>
         <span>· UTF-8</span>
       </div>
     </div>

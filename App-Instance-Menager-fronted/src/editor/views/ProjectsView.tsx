@@ -8,9 +8,15 @@ interface ProjectsViewProps {
   onOpenProject: (project: Project) => void;
   onDeploy: () => void;
   onExecution: () => void;
+  onUpload: () => void;
 }
 
-export const ProjectsView: React.FC<ProjectsViewProps> = ({ onOpenProject, onDeploy, onExecution }) => {
+export const ProjectsView: React.FC<ProjectsViewProps> = ({
+  onOpenProject,
+  onDeploy,
+  onExecution,
+  onUpload,
+}) => {
   const { filteredProjects, state, setFilter, setSearchQuery, createProject, loading, error } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -36,6 +42,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({ onOpenProject, onDep
               <button className="nav-tab active">Projekty</button>
               <button className="nav-tab" onClick={onDeploy}>Deploy</button>
               <button className="nav-tab" onClick={onExecution}>Instancje</button>
+              <button className="nav-tab" onClick={onUpload}>Prześlij plik</button>
             </div>
             <div className="breadcrumb">
               <span className="breadcrumb-sep">/</span>

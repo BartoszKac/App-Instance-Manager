@@ -1,81 +1,118 @@
-// ─── TYPES ────────────────────────────────────────────────────────────────────
+// src/deploy/model/DeployState.ts
 
-export type ServerStatus = 'online' | 'offline' | 'unknown';
+// ─── API RESPONSE TYPES ───────────────────────────────────────────────────────
 
-export interface DeployFile {
-  name: string;
-  ext: string;
-}
-
-export interface DeployProject {
+/** From GET /api/code/source/main-class/all */
+export interface MainClass {
+  idManClass: number;
   id: number;
   name: string;
-  lang: string;
-  files: DeployFile[];
+  code: string;
+  language: LanguageType;
 }
 
-export interface DeployServer {
-  id: string;
+/** From GET /api/process */
+export interface Process {
+  id: number;
   name: string;
-  host: string;
-  port: number;
-  user: string;
-  status: ServerStatus;
+  contents: string[];
+  language: LanguageType;
 }
 
-export interface SelectedFileEntry {
-  project: DeployProject;
-  file: DeployFile;
+/** From GET /api/deploy/servers — mirrors RemoteSerwerConfiguration entity */
+export interface DeployServer {
+  // backend może zwracać idConfiguration lub IdConfiguration — obsługujemy oba
+  idConfiguration?: number;
+  IdConfiguration?: number;
+  name: string;
+  ip: string;
+  user: string;
+  pass: string;
+  operationSystem: OperationSystem | null;
+}
+
+/** Pomocnicza funkcja — zawsze zwraca id serwera niezależnie od wielkości liter */
+export function getServerId(srv: DeployServer): number {
+  return (srv.idConfiguration ?? srv.IdConfiguration)!;
+}
+
+// ─── TRANSFER TYPES ───────────────────────────────────────────────────────────
+
+export type UploadStrategyType = 'SOURCE_CODE' | 'COMPILED_CODE' | 'REMOTE_EXECUTABLE';
+
+export type LanguageType = 'JAVA' | 'PYTHON' | 'JAVASCRIPT' | string;
+
+export type OperationSystem = 'LINUX' | 'WINDOWS' | string;
+
+export interface BulkTransferItem {
+  mainClassId: number;
+  configurationId: number;
+  uploadStrategyType: UploadStrategyType;
+}
+
+// ─── UI TYPES ─────────────────────────────────────────────────────────────────
+
+export type FileSource = 'source' | 'process';
+
+export interface DeployFile {
+  key: string;
+  name: string;
+  language: LanguageType;
+  source: FileSource;
+  id: number;
+  /** Strategia przypisana do tego konkretnego pliku */
+  strategy: UploadStrategyType;
 }
 
 export interface NewServerForm {
   name: string;
   host: string;
-  port: string;
   user: string;
+  pass: string;
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
-export const MOCK_PROJECTS: DeployProject[] = [
-  {
-    id: 1,
-    name: 'frontend-app',
-    lang: 'ts',
-    files: [
-      { name: 'App.tsx',      ext: 'ts'  },
-      { name: 'useStore.ts',  ext: 'ts'  },
-      { name: 'styles.css',   ext: 'css' },
-      { name: 'types.ts',     ext: 'ts'  },
-    ],
-  },
-  {
-    id: 2,
-    name: 'api-server',
-    lang: 'py',
-    files: [
-      { name: 'main.py',   ext: 'py' },
-      { name: 'config.py', ext: 'py' },
-      { name: 'utils.py',  ext: 'py' },
-    ],
-  },
-  {
-    id: 3,
-    name: 'cli-tool',
-    lang: 'rs',
-    files: [
-      { name: 'main.rs',    ext: 'rs'   },
-      { name: 'router.rs',  ext: 'rs'   },
-      { name: 'Cargo.toml', ext: 'json' },
-    ],
-  },
+export const UPLOAD_STRATEGIES: UploadStrategyType[] = [
+  'SOURCE_CODE',
+  'COMPILED_CODE',
+  'REMOTE_EXECUTABLE',
 ];
 
-export const INITIAL_SERVERS: DeployServer[] = [
-  { id: 's1', name: 'Production', host: 'prod.example.com',    port: 22,   user: 'deploy', status: 'online'  },
-  { id: 's2', name: 'Staging',    host: 'staging.example.com', port: 22,   user: 'ubuntu', status: 'online'  },
-  { id: 's3', name: 'Dev Server', host: '192.168.1.10',        port: 2222, user: 'root',   status: 'offline' },
-];
+export const STRATEGY_LABEL: Record<UploadStrategyType, string> = {
+  SOURCE_CODE:       'Source',
+  COMPILED_CODE:     'Compiled',
+  REMOTE_EXECUTABLE: 'Executable',
+};
+
+/** Domyślna strategia na podstawie języka */
+export function defaultStrategy(language: LanguageType): UploadStrategyType {
+  if (language === 'JAVA')   return 'COMPILED_CODE';
+  if (language === 'PYTHON') return 'SOURCE_CODE';
+  return 'SOURCE_CODE';
+}
+
+export const LANG_COLOR: Record<string, string> = {
+  JAVA:       '#f59e0b',
+  PYTHON:     '#22c55e',
+  JAVASCRIPT: '#4f7ef7',
+  TS:         '#4f7ef7',
+  RS:         '#ef4444',
+  CSS:        '#7c3aed',
+};
+
+export const LANG_EXT: Record<string, string> = {
+  JAVA:       'java',
+  PYTHON:     'py',
+  JAVASCRIPT: 'js',
+};
+
+export const EMPTY_NEW_SERVER: NewServerForm = {
+  name: '',
+  host: '',
+  user: 'deploy',
+  pass: '',
+};
 
 export const EXT_COLOR: Record<string, string> = {
   ts:   '#4f7ef7',
@@ -84,11 +121,8 @@ export const EXT_COLOR: Record<string, string> = {
   rs:   '#ef4444',
   css:  '#7c3aed',
   json: '#94a3b8',
-};
-
-export const EMPTY_NEW_SERVER: NewServerForm = {
-  name: '',
-  host: '',
-  port: '22',
-  user: 'deploy',
+  java: '#f59e0b',
+  JAVA:       '#f59e0b',
+  PYTHON:     '#22c55e',
+  JAVASCRIPT: '#4f7ef7',
 };

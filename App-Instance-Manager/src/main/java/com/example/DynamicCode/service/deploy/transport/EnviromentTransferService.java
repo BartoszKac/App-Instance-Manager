@@ -59,15 +59,14 @@ public class EnviromentTransferService {
 
         String remotePath = remoteDirectoryService.getRemoteDirectoryPath(remoteSerwerConfiguration.getOperationSystem());
 
-        saveProgramConfiguration(mainClassId, idConfiguration, remoteSerwerConfiguration.getIdConfiguration(), uploadStrategyType, remotePath);
+        saveProgramConfiguration(mainClassId, idConfiguration,  uploadStrategyType, remotePath);
 
         executeSshUpload(mainClassId, remoteSerwerConfiguration, uploadStrategyType, remotePath);
     }
 
-    private void saveProgramConfiguration(Long mainClassId, Long idConfiguration, Long idSerwer, UploadStrategyType uploadStrategyType, String remotePath) {
+    private void saveProgramConfiguration(Long mainClassId, Long idConfiguration,  UploadStrategyType uploadStrategyType, String remotePath) {
         RemoteProgramConfiguration remoteProgramConfiguration = RemoteProgramConfiguration.builder()
-                .idConfiguration(idConfiguration)
-                .idSerwer(idSerwer)
+                .idSerwer(idConfiguration)
                 .uploadStrategyType(uploadStrategyType)
                 .idCode(mainClassId)
                 .pathInServer(remotePath)

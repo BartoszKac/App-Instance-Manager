@@ -1,8 +1,7 @@
-// src/router/useRouter.ts
 import { useState } from 'react';
 import { Project } from '../editor/model/EditorState';
 
-export type Screen = 'projects' | 'editor' | 'deploy' | 'execution';
+export type Screen = 'projects' | 'editor' | 'deploy' | 'execution' | 'upload';
 
 interface RouterState {
   screen: Screen;

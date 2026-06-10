@@ -1,12 +1,19 @@
 // src/deploy/components/CenterPanel.tsx
 import React from 'react';
-import { EXT_COLOR } from '../model/DeployState';
+import { LANG_COLOR, LANG_EXT, STRATEGY_LABEL } from '../model/DeployState';
+import { getServerId } from '../model/DeployState';
 import { DeployViewModel } from '../viewmodel/useDeployViewModel';
 import { StatusDot } from './DeployAtoms';
 
 interface CenterPanelProps {
   vm: DeployViewModel;
 }
+
+const STRATEGY_COLOR = {
+  SOURCE_CODE:       '#4f7ef7',
+  COMPILED_CODE:     '#f59e0b',
+  REMOTE_EXECUTABLE: '#22c55e',
+} as const;
 
 export const CenterPanel: React.FC<CenterPanelProps> = ({ vm }) => {
   const {
@@ -24,24 +31,19 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({ vm }) => {
 
       {/* summary bar */}
       <div className="deploy-summary-bar">
-        {/* files count */}
         <div className={`summary-item ${selectedFilesList.length ? 'active-files' : ''}`}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
           </svg>
-          <span className="summary-stat-count">
-            {selectedFilesList.length}
-          </span>
+          <span className="summary-stat-count">{selectedFilesList.length}</span>
           <span style={{ color: 'var(--text3)' }}>pliki</span>
         </div>
 
-        {/* arrow */}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2">
           <path d="M5 12h14M12 5l7 7-7 7" />
         </svg>
 
-        {/* servers count */}
         <div className={`summary-item ${selectedServersList.length ? 'active-servers' : ''}`}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2">
             <rect x="2" y="2" width="20" height="8" rx="2" />
@@ -49,15 +51,12 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({ vm }) => {
             <line x1="6" y1="6" x2="6.01" y2="6" />
             <line x1="6" y1="18" x2="6.01" y2="18" />
           </svg>
-          <span className="summary-stat-count">
-            {selectedServersList.length}
-          </span>
+          <span className="summary-stat-count">{selectedServersList.length}</span>
           <span style={{ color: 'var(--text3)' }}>serwery</span>
         </div>
 
         <div style={{ flex: 1 }} />
 
-        {/* deploy button */}
         <button
           onClick={deploy}
           disabled={!canDeploy}
@@ -65,10 +64,7 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({ vm }) => {
           style={{ opacity: deploying ? 0.8 : 1 }}
         >
           {deploying ? (
-            <>
-              <span className="deploy-spinner" />
-              Deploying…
-            </>
+            <><span className="deploy-spinner" />Deploying…</>
           ) : deployDone ? (
             <>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -93,29 +89,43 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({ vm }) => {
           <div className="deploy-section-title">Plan deploymentu</div>
           <div className="deploy-plan-list">
             {selectedServersList.map((srv) => (
-              <div
-                key={srv.id}
-                className="deploy-card"
-              >
-                <StatusDot status={srv.status} />
+              <div key={getServerId(srv)} className="deploy-card">
+                <StatusDot status="online" />
                 <div style={{ fontSize: 12, fontWeight: 600, minWidth: 90, paddingTop: 1 }}>
                   {srv.name}
+                  <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', fontWeight: 400 }}>
+                    {srv.user}@{srv.ip}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {selectedFilesList.map(({ project, file }) => (
-                    <span
-                      key={`${project.id}-${file.name}`}
-                      style={{
-                        fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text2)',
-                        background: `${EXT_COLOR[file.ext] || '#94a3b8'}20`, 
-                        padding: '2px 7px', borderRadius: 4,
-                        border: `1px solid ${EXT_COLOR[file.ext] || '#94a3b8'}40`,
-                      }}
-                    >
-                      <span style={{ color: 'var(--text3)' }}>{project.name}/</span>
-                      <span style={{ color: EXT_COLOR[file.ext] ?? '#94a3b8' }}>{file.name}</span>
-                    </span>
-                  ))}
+                  {selectedFilesList.map((file) => {
+                    const color      = LANG_COLOR[file.language] ?? '#94a3b8';
+                    const ext        = LANG_EXT[file.language]   ?? file.language.toLowerCase();
+                    const stratColor = STRATEGY_COLOR[file.strategy] ?? '#94a3b8';
+                    return (
+                      <span
+                        key={file.key}
+                        style={{
+                          fontSize: 11, fontFamily: 'var(--mono)',
+                          background: `${color}20`,
+                          padding: '2px 7px', borderRadius: 4,
+                          border: `1px solid ${color}40`,
+                          display: 'flex', alignItems: 'center', gap: 4,
+                        }}
+                      >
+                        <span style={{ color: 'var(--text3)' }}>.{ext}/</span>
+                        <span style={{ color }}>{file.name}</span>
+                        <span style={{
+                          fontSize: 9, color: stratColor,
+                          background: stratColor + '20',
+                          padding: '0px 4px', borderRadius: 2,
+                          border: `1px solid ${stratColor}40`,
+                        }}>
+                          {STRATEGY_LABEL[file.strategy]}
+                        </span>
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -152,9 +162,7 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({ vm }) => {
                 <div key={i} style={{ color, whiteSpace: 'pre-wrap' }}>{line}</div>
               );
             })}
-            {deploying && (
-              <span className="terminal-cursor" />
-            )}
+            {deploying && <span className="terminal-cursor" />}
           </div>
         </div>
       )}

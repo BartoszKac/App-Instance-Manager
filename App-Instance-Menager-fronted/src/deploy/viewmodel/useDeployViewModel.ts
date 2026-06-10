@@ -1,242 +1,307 @@
-import { useState, useMemo, useCallback } from 'react';
+// src/deploy/viewmodel/useDeployViewModel.ts
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  DeployProject,
+  MainClass,
+  Process,
   DeployServer,
-  SelectedFileEntry,
+  DeployFile,
+  BulkTransferItem,
+  UploadStrategyType,
   NewServerForm,
-  MOCK_PROJECTS,
-  INITIAL_SERVERS,
   EMPTY_NEW_SERVER,
+  getServerId,
+  defaultStrategy,
 } from '../model/DeployState';
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// ─── API ──────────────────────────────────────────────────────────────────────
 
-const fileKey = (projId: number, fileName: string) => `${projId}::${fileName}`;
+const API = 'http://localhost:8888';
+
+async function apiFetch<T = void>(path: string, opts?: RequestInit): Promise<T> {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${path}`);
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
+}
 
 function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
-// ─── VIEW MODEL ───────────────────────────────────────────────────────────────
+// ─── INTERFACE ────────────────────────────────────────────────────────────────
 
 export interface DeployViewModel {
-  // data
-  projects: DeployProject[];
+  loading: boolean;
+  loadError: string | null;
+
+  files: DeployFile[];
   allServers: DeployServer[];
 
-  // selection
   selectedFiles: Set<string>;
-  selectedServers: Set<string>;
-  collapsedProjects: Set<number>;
+  selectedServers: Set<number>;
 
-  // derived
-  selectedFilesList: SelectedFileEntry[];
+  selectedFilesList: DeployFile[];
   selectedServersList: DeployServer[];
   canDeploy: boolean;
 
-  // actions — files
-  toggleFile: (projId: number, fileName: string) => void;
-  toggleAllProjectFiles: (proj: DeployProject) => void;
-  toggleCollapseProject: (projId: number) => void;
+  // per-file strategy
+  setFileStrategy: (key: string, strategy: UploadStrategyType) => void;
 
-  // actions — servers
-  toggleServer: (serverId: string) => void;
+  toggleFile: (key: string) => void;
+  toggleAllFiles: () => void;
 
-  // actions — deploy
+  toggleServer: (id: number) => void;
+  deleteServer: (id: number) => Promise<void>;
+
   deploy: () => Promise<void>;
   deploying: boolean;
   deployLog: string[];
   deployDone: boolean;
 
-  // actions — add server modal
   showAddServer: boolean;
   setShowAddServer: (v: boolean) => void;
   newServer: NewServerForm;
   setNewServer: (fn: (prev: NewServerForm) => NewServerForm) => void;
-  addServer: () => void;
+  addServer: () => Promise<void>;
+  addingServer: boolean;
+  addServerError: string | null;
 }
 
+// ─── HOOK ─────────────────────────────────────────────────────────────────────
+
 export function useDeployViewModel(): DeployViewModel {
-  const [projects]    = useState<DeployProject[]>(MOCK_PROJECTS);
-  const [baseServers] = useState<DeployServer[]>(INITIAL_SERVERS);
-  const [extraServers, setExtraServers] = useState<DeployServer[]>([]);
+  const [mainClasses, setMainClasses] = useState<MainClass[]>([]);
+  const [processes,   setProcesses]   = useState<Process[]>([]);
+  const [allServers,  setAllServers]  = useState<DeployServer[]>([]);
 
-  const allServers = useMemo(
-    () => [...baseServers, ...extraServers],
-    [baseServers, extraServers],
-  );
+  const [loading,   setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // selection state
-  const [selectedFiles,      setSelectedFiles]      = useState<Set<string>>(new Set());
-  const [selectedServers,    setSelectedServers]    = useState<Set<string>>(new Set());
-  const [collapsedProjects,  setCollapsedProjects]  = useState<Set<number>>(new Set());
+  const [selectedFiles,   setSelectedFiles]   = useState<Set<string>>(new Set());
+  const [selectedServers, setSelectedServers] = useState<Set<number>>(new Set());
 
-  // deploy state
+  // per-file strategy overrides: key → UploadStrategyType
+  const [fileStrategies, setFileStrategies] = useState<Record<string, UploadStrategyType>>({});
+
   const [deploying,  setDeploying]  = useState(false);
   const [deployLog,  setDeployLog]  = useState<string[]>([]);
   const [deployDone, setDeployDone] = useState(false);
 
-  // add-server modal
-  const [showAddServer, setShowAddServer] = useState(false);
-  const [newServer, setNewServer] = useState<NewServerForm>(EMPTY_NEW_SERVER);
+  const [showAddServer,  setShowAddServer]  = useState(false);
+  const [newServer,      setNewServer]      = useState<NewServerForm>(EMPTY_NEW_SERVER);
+  const [addingServer,   setAddingServer]   = useState(false);
+  const [addServerError, setAddServerError] = useState<string | null>(null);
 
-  // ── derived ────────────────────────────────────────────────────────────────
-
-  const selectedFilesList = useMemo<SelectedFileEntry[]>(() => {
-    const result: SelectedFileEntry[] = [];
-    for (const proj of projects) {
-      for (const file of proj.files) {
-        if (selectedFiles.has(fileKey(proj.id, file.name))) {
-          result.push({ project: proj, file });
-        }
+  // ── fetch on mount ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    const fetchAll = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const [mc, procs, servers] = await Promise.all([
+          apiFetch<MainClass[]>('/api/code/source/main-class/all'),
+          apiFetch<Process[]>('/api/process'),
+          apiFetch<DeployServer[]>('/api/deploy/servers'),
+        ]);
+        if (cancelled) return;
+        setMainClasses(mc);
+        setProcesses(procs);
+        setAllServers(servers);
+      } catch (err: unknown) {
+        if (!cancelled)
+          setLoadError(err instanceof Error ? err.message : 'Błąd pobierania danych');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }
-    return result;
-  }, [selectedFiles, projects]);
+    };
+    fetchAll();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── derived: file list with per-file strategy ──────────────────────────────
+  const files = useMemo<DeployFile[]>(() => {
+    const src: DeployFile[] = mainClasses.map((mc) => {
+      const key = `source::${mc.idManClass}`;
+      return {
+        key,
+        name:     mc.name,
+        language: mc.language,
+        source:   'source' as const,
+        id:       mc.idManClass,
+        strategy: fileStrategies[key] ?? defaultStrategy(mc.language),
+      };
+    });
+    const proc: DeployFile[] = processes.map((p) => {
+      const key = `process::${p.id}`;
+      return {
+        key,
+        name:     p.name,
+        language: p.language,
+        source:   'process' as const,
+        id:       p.id,
+        strategy: fileStrategies[key] ?? defaultStrategy(p.language),
+      };
+    });
+    return [...src, ...proc];
+  }, [mainClasses, processes, fileStrategies]);
+
+  const selectedFilesList = useMemo(
+    () => files.filter((f) => selectedFiles.has(f.key)),
+    [files, selectedFiles],
+  );
 
   const selectedServersList = useMemo(
-    () => allServers.filter((s) => selectedServers.has(s.id)),
-    [selectedServers, allServers],
+    () => allServers.filter((s) => selectedServers.has(getServerId(s))),
+    [allServers, selectedServers],
   );
 
   const canDeploy =
     selectedFilesList.length > 0 && selectedServersList.length > 0 && !deploying;
 
-  // ── actions — files ────────────────────────────────────────────────────────
-
-  const resetDeployState = () => {
+  // ── helpers ────────────────────────────────────────────────────────────────
+  const resetDeployState = useCallback(() => {
     setDeployDone(false);
     setDeployLog([]);
-  };
+  }, []);
 
-  const toggleFile = useCallback((projId: number, fileName: string) => {
-    const k = fileKey(projId, fileName);
+  // ── file actions ───────────────────────────────────────────────────────────
+  const setFileStrategy = useCallback((key: string, strategy: UploadStrategyType) => {
+    setFileStrategies((prev) => ({ ...prev, [key]: strategy }));
+  }, []);
+
+  const toggleFile = useCallback((key: string) => {
     setSelectedFiles((prev) => {
       const next = new Set(prev);
-      next.has(k) ? next.delete(k) : next.add(k);
+      next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
     resetDeployState();
-  }, []);
+  }, [resetDeployState]);
 
-  const toggleAllProjectFiles = useCallback(
-    (proj: DeployProject) => {
-      const keys = proj.files.map((f) => fileKey(proj.id, f.name));
-      const allSelected = keys.every((k) => selectedFiles.has(k));
-      setSelectedFiles((prev) => {
-        const next = new Set(prev);
-        if (allSelected) keys.forEach((k) => next.delete(k));
-        else             keys.forEach((k) => next.add(k));
-        return next;
-      });
-      resetDeployState();
-    },
-    [selectedFiles],
-  );
-
-  const toggleCollapseProject = useCallback((projId: number) => {
-    setCollapsedProjects((prev) => {
-      const next = new Set(prev);
-      next.has(projId) ? next.delete(projId) : next.add(projId);
-      return next;
+  const toggleAllFiles = useCallback(() => {
+    setSelectedFiles((prev) => {
+      if (prev.size === files.length && files.length > 0) return new Set();
+      return new Set(files.map((f) => f.key));
     });
-  }, []);
+    resetDeployState();
+  }, [files, resetDeployState]);
 
-  // ── actions — servers ──────────────────────────────────────────────────────
-
-  const toggleServer = useCallback((serverId: string) => {
+  // ── server actions ─────────────────────────────────────────────────────────
+  const toggleServer = useCallback((id: number) => {
     setSelectedServers((prev) => {
       const next = new Set(prev);
-      next.has(serverId) ? next.delete(serverId) : next.add(serverId);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
     resetDeployState();
+  }, [resetDeployState]);
+
+  const deleteServer = useCallback(async (id: number) => {
+    if (!id) return;
+    try {
+      await apiFetch(`/api/deploy/server/${id}`, { method: 'DELETE' });
+      setAllServers((prev) => prev.filter((s) => getServerId(s) !== id));
+      setSelectedServers((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } catch (err: unknown) {
+      console.error('Błąd usuwania serwera:', err);
+    }
   }, []);
 
-  // ── actions — deploy ───────────────────────────────────────────────────────
-
+  // ── deploy ─────────────────────────────────────────────────────────────────
   const deploy = useCallback(async () => {
     if (!canDeploy) return;
 
     setDeploying(true);
     setDeployDone(false);
     const log: string[] = [];
+    const push = (msg: string) => { log.push(msg); setDeployLog([...log]); };
 
-    const push = (msg: string) => {
-      log.push(msg);
-      setDeployLog([...log]);
-    };
+    push(`▶ Przygotowuję deploy — ${selectedFilesList.length} plik(ów) → ${selectedServersList.length} serwer(ów)`);
+    await delay(300);
 
-    push(
-      `▶ Starting deploy — ${selectedFilesList.length} file(s) → ${selectedServersList.length} server(s)`,
-    );
-    await delay(400);
-
+    // każdy plik ma własną strategię
+    const payload: BulkTransferItem[] = [];
     for (const srv of selectedServersList) {
-      push(`\n⚡ Connecting to ${srv.name} (${srv.user}@${srv.host}:${srv.port})…`);
-      await delay(500);
-
-      if (srv.status === 'offline') {
-        push(`  ✗ ${srv.name} — connection refused`);
-        continue;
+      for (const file of selectedFilesList) {
+        payload.push({
+          mainClassId:        file.id,
+          configurationId:    getServerId(srv),
+          uploadStrategyType: file.strategy,
+        });
       }
-
-      push(`  ✓ Authenticated`);
-
-      for (const { project, file } of selectedFilesList) {
-        await delay(250 + Math.random() * 300);
-        push(`  → ${project.name}/${file.name}`);
-      }
-
-      push(`  ✅ ${srv.name} done`);
     }
 
-    await delay(300);
-    push(`\n✅ Deploy complete`);
-    setDeploying(false);
-    setDeployDone(true);
+    push(`⚡ Wysyłam ${payload.length} operacji…`);
+    await delay(200);
+
+    try {
+      await apiFetch('/api/deploy/transfer/bulk', {
+        method: 'POST',
+        body:   JSON.stringify(payload),
+      });
+      for (const srv of selectedServersList) {
+        push(`\n→ ${srv.name} (${srv.user}@${srv.ip})`);
+        for (const file of selectedFilesList) {
+          push(`   ✅ ${file.name} [${file.strategy}]`);
+        }
+      }
+      await delay(200);
+      push(`\n✅ Deploy zakończony pomyślnie`);
+      setDeployDone(true);
+    } catch (err: unknown) {
+      push(`\n✗ Błąd deployu: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setDeploying(false);
+    }
   }, [canDeploy, selectedFilesList, selectedServersList]);
 
-  // ── actions — add server ───────────────────────────────────────────────────
-
-  const addServer = useCallback(() => {
+  // ── add server ─────────────────────────────────────────────────────────────
+  const addServer = useCallback(async () => {
     if (!newServer.name.trim() || !newServer.host.trim()) return;
-    setExtraServers((prev) => [
-      ...prev,
-      {
-        id:     `u-${Date.now()}`,
-        name:   newServer.name.trim(),
-        host:   newServer.host.trim(),
-        port:   Number(newServer.port) || 22,
-        user:   newServer.user.trim() || 'deploy',
-        status: 'unknown',
-      },
-    ]);
-    setNewServer(() => EMPTY_NEW_SERVER);
-    setShowAddServer(false);
+    setAddingServer(true);
+    setAddServerError(null);
+    try {
+      await apiFetch('/api/deploy/server', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: newServer.name.trim(),
+          ip:   newServer.host.trim(),
+          user: newServer.user.trim() || 'deploy',
+          pass: newServer.pass,
+        }),
+      });
+      const updated = await apiFetch<DeployServer[]>('/api/deploy/servers');
+      setAllServers(updated);
+      setNewServer(() => EMPTY_NEW_SERVER);
+      setShowAddServer(false);
+    } catch (err: unknown) {
+      setAddServerError(err instanceof Error ? err.message : 'Błąd dodawania serwera');
+    } finally {
+      setAddingServer(false);
+    }
   }, [newServer]);
 
   return {
-    projects,
-    allServers,
-    selectedFiles,
-    selectedServers,
-    collapsedProjects,
-    selectedFilesList,
-    selectedServersList,
+    loading, loadError,
+    files, allServers,
+    selectedFiles, selectedServers,
+    selectedFilesList, selectedServersList,
     canDeploy,
-    toggleFile,
-    toggleAllProjectFiles,
-    toggleCollapseProject,
-    toggleServer,
-    deploy,
-    deploying,
-    deployLog,
-    deployDone,
-    showAddServer,
-    setShowAddServer,
-    newServer,
-    setNewServer,
-    addServer,
+    setFileStrategy,
+    toggleFile, toggleAllFiles,
+    toggleServer, deleteServer,
+    deploy, deploying, deployLog, deployDone,
+    showAddServer, setShowAddServer,
+    newServer, setNewServer,
+    addServer, addingServer, addServerError,
   };
 }

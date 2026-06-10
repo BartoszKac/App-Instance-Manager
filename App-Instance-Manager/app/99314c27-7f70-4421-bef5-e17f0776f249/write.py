@@ -1,5 +1,5 @@
 # Definiujemy nazwę pliku oraz zawartość
-nazwa_pliku = "dupa.txt"
+nazwa_pliku = "dupaikutas.txt"
 zawartosc = "seks"
 
 # Otwieramy plik w trybie zapisu ('w' - write)

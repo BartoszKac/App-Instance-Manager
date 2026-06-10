@@ -4,8 +4,8 @@ import { useRouter } from '@/router';
 import { ProjectsView, EditorView } from '@/editor/views';
 import { Project } from '@/editor/model';
 import { DeployView } from '@/deploy/views';
-// Importujemy z nowej lokalizacji
 import { ExecutionView } from '@/execution/views/ExecutionView';
+import { UploadView } from '@/process/views/UploadView';
 
 import '@/styles/global.css';
 
@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const handleBack        = ()                  => navigateTo('projects');
   const handleDeploy      = ()                  => navigateTo('deploy');
   const handleExecution   = ()                  => navigateTo('execution');
+  const handleUpload      = ()                  => navigateTo('upload');
 
   return (
     <div className="app">
@@ -24,6 +25,7 @@ const App: React.FC = () => {
           onOpenProject={handleOpenProject}
           onDeploy={handleDeploy}
           onExecution={handleExecution}
+          onUpload={handleUpload}
         />
       )}
 
@@ -45,6 +47,10 @@ const App: React.FC = () => {
           onProjects={handleBack}
           onDeploy={handleDeploy}
         />
+      )}
+
+      {state.screen === 'upload' && (
+        <UploadView onBack={handleBack} />
       )}
     </div>
   );

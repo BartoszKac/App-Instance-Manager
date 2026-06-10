@@ -44,11 +44,11 @@ public class DeployController {
     public ResponseEntity<RemoteSerwerConfiguration> getServerConfig(@PathVariable Long idConfiguration) {
         return ResponseEntity.ok(providerDeployService.getServerConfiguration(idConfiguration));
     }
-
-    @PutMapping("/server")
-    public ResponseEntity<RemoteSerwerConfiguration> updateServerConfig(@RequestBody RemoteSerwerConfiguration updatedConfig) {
-        return ResponseEntity.ok(providerDeployService.updateServerConfiguration(updatedConfig));
-    }
+//
+//    @PutMapping("/server")
+//    public ResponseEntity<RemoteSerwerConfiguration> updateServerConfig(@RequestBody RemoteSerwerConfiguration updatedConfig) {
+//        return ResponseEntity.ok(providerDeployService.updateServerConfiguration(updatedConfig));
+//    }
 
     @DeleteMapping("/server/{idConfiguration}")
     public ResponseEntity<Void> removeServerConfig(@PathVariable Long idConfiguration) {
