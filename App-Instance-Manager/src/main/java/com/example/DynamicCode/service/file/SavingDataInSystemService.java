@@ -11,6 +11,7 @@ import com.example.DynamicCode.model.entity.code.CompiledCode;
 import com.example.DynamicCode.model.entity.code.SourceCode;
 import com.example.DynamicCode.model.entity.file.CompiledFolderInTheDisk;
 import com.example.DynamicCode.model.entity.file.SourceFolderInTheDisk;
+import com.example.DynamicCode.notification.FrontendNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SavingDataInSystemService {
 
+    private final FrontendNotificationService service;
     private final CompiledCodeService compiledCodeService;
     private final MapperFile mapperFile;
     private final FileService fileService;
@@ -42,7 +44,7 @@ public class SavingDataInSystemService {
             fileService.saveFilesToDisk(sourceCodes, uniquePath);
 
             saveDataToDatabase(sourceCodes, uniquePath);
-
+            service.sendToFrontend("Zapis kodu zakończony sukcesem! Pliki zostały zapisane w systemie.");
             return uniquePath;
 
         } catch (Exception e) {

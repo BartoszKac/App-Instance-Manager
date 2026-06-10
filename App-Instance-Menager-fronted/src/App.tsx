@@ -6,6 +6,7 @@ import { Project } from '@/editor/model';
 import { DeployView } from '@/deploy/views';
 import { ExecutionView } from '@/execution/views/ExecutionView';
 import { UploadView } from '@/process/views/UploadView';
+import PackageTerminal from '@/terminal/PackageTerminal';
 
 import '@/styles/global.css';
 
@@ -19,39 +20,45 @@ const App: React.FC = () => {
   const handleUpload      = ()                  => navigateTo('upload');
 
   return (
-    <div className="app">
-      {state.screen === 'projects' && (
-        <ProjectsView
-          onOpenProject={handleOpenProject}
-          onDeploy={handleDeploy}
-          onExecution={handleExecution}
-          onUpload={handleUpload}
-        />
-      )}
+    <div className="app" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
 
-      {state.screen === 'editor' && state.currentProject && (
-        <EditorView
-          project={state.currentProject}
-          onBack={handleBack}
-          onDeploy={handleDeploy}
-          onExecution={handleExecution}
-        />
-      )}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {state.screen === 'projects' && (
+          <ProjectsView
+            onOpenProject={handleOpenProject}
+            onDeploy={handleDeploy}
+            onExecution={handleExecution}
+            onUpload={handleUpload}
+          />
+        )}
 
-      {state.screen === 'deploy' && (
-        <DeployView onBack={handleBack} onExecution={handleExecution} />
-      )}
+        {state.screen === 'editor' && state.currentProject && (
+          <EditorView
+            project={state.currentProject}
+            onBack={handleBack}
+            onDeploy={handleDeploy}
+            onExecution={handleExecution}
+          />
+        )}
 
-      {state.screen === 'execution' && (
-        <ExecutionView
-          onProjects={handleBack}
-          onDeploy={handleDeploy}
-        />
-      )}
+        {state.screen === 'deploy' && (
+          <DeployView onBack={handleBack} onExecution={handleExecution} />
+        )}
 
-      {state.screen === 'upload' && (
-        <UploadView onBack={handleBack} />
-      )}
+        {state.screen === 'execution' && (
+          <ExecutionView
+            onProjects={handleBack}
+            onDeploy={handleDeploy}
+          />
+        )}
+
+        {state.screen === 'upload' && (
+          <UploadView onBack={handleBack} />
+        )}
+      </div>
+
+      <PackageTerminal />
+
     </div>
   );
 };
