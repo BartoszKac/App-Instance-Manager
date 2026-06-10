@@ -12,9 +12,9 @@ public class RemoteDirectoryService {
         }
 
         return switch (operationSystem) {
-            case WINDOWS -> ""; // SFTP domyślnie wrzuci do katalogu użytkownika na Windowsie
-            case LINUX -> "";   // SFTP domyślnie wrzuci do /home/nazwa_uzytkownika/
-            case MAC -> "";     // SFTP domyślnie wrzuci do /Users/nazwa_uzytkownika/
+            case WINDOWS -> "";
+            case LINUX -> "test/"; // Pełna, bezwzględna ścieżka
+            case MAC -> "";
         };
     }
 }

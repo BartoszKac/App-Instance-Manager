@@ -1,0 +1,1 @@
+To jest przykładowa treść zapisana do pliku.

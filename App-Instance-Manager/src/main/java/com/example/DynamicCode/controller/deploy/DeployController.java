@@ -1,6 +1,7 @@
 package com.example.DynamicCode.controller.deploy;
 
 import com.example.DynamicCode.constants.deploy.UploadStrategyType;
+import com.example.DynamicCode.model.dto.deploy.ExecuteDto;
 import com.example.DynamicCode.model.dto.deploy.TransferTask;
 import com.example.DynamicCode.model.entity.deploy.RemoteSerwerConfiguration;
 import com.example.DynamicCode.model.entity.deploy.RemoteProgramConfiguration; // Upewnij się, że pakiet jest poprawny
@@ -63,15 +64,20 @@ public class DeployController {
         log.info("[API-Deploy] Zapytanie HTTP GET o konfigurację programu dla MainClassId: {}", mainClassId);
         return ResponseEntity.ok(providerDeployService.getProgramConfiguration(mainClassId));
     }
-
+    // 3 ekran
     @GetMapping("/programs")
     public ResponseEntity<List<RemoteProgramConfiguration>> getAllConfigurations() {
         log.info("[API-Deploy] Zapytanie HTTP GET o wszystkie konfiguracje programów.");
         return ResponseEntity.ok(providerDeployService.getAllConfigurations());
     }
+    @PostMapping("/program/execute")
+    public ResponseEntity<String> executeProgramOnRemoteServer(@RequestBody ExecuteDto dto) {
+        String result = providerDeployService.executeProgramOnRemoteServer(dto.getCommand(), dto.getProgramConfigId());
+        return ResponseEntity.ok(result);
+    }
+    /// koniec 3 ekranu
 
     // --- TRANSFERY / WDROŻENIA ---
-
     @PostMapping("/transfer/bulk")
     public ResponseEntity<Void> executeBulkTransfer(@RequestBody List<TransferTask> tasks) {
         providerDeployService.executeEnvironmentUploads(tasks);

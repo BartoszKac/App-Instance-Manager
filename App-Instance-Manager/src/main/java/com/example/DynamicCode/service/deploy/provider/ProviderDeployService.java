@@ -4,6 +4,7 @@ import com.example.DynamicCode.databaseservice.deploy.RemoteProgramService;
 import com.example.DynamicCode.model.dto.deploy.TransferTask;
 import com.example.DynamicCode.model.entity.deploy.RemoteProgramConfiguration;
 import com.example.DynamicCode.model.entity.deploy.RemoteSerwerConfiguration;
+import com.example.DynamicCode.service.deploy.execution.ExecutionService;
 import com.example.DynamicCode.service.deploy.serwer.SerwerConfigurationService;
 import com.example.DynamicCode.service.deploy.transport.EnviromentTransferService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProviderDeployService {
 
+
+    private final ExecutionService executionService;
     private final SerwerConfigurationService serwerConfigurationService;
     private final EnviromentTransferService enviromentTransferService;
     private final RemoteProgramService remoteProgramService;
@@ -98,5 +101,10 @@ public class ProviderDeployService {
     public List<RemoteProgramConfiguration> getAllConfigurations() {
         log.info("[Provider-Deploy] Pobieranie wszystkich konfiguracji programów z bazy danych.");
         return remoteProgramService.getAllConfigurations();
+    }
+
+    public String executeProgramOnRemoteServer(String command, Long idConfiguration) {
+        log.info("[Provider-Deploy] Wykonywanie polecenia na zdalnym serwerze. Command: {}, ProgramConfigId: {}", command, idConfiguration);
+        return executionService.executeCommandOnRemoteServer(command, idConfiguration);
     }
 }

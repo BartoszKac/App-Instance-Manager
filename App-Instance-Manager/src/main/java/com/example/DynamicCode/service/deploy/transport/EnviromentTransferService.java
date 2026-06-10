@@ -58,7 +58,7 @@ public class EnviromentTransferService {
         RemoteSerwerConfiguration remoteSerwerConfiguration = remoteSerwerService.getConfigById(idConfiguration);
 
         String remotePath = remoteDirectoryService.getRemoteDirectoryPath(remoteSerwerConfiguration.getOperationSystem());
-
+        System.out.println("Zdalna ścieżka docelowa dla uploadu: " + remotePath);
         saveProgramConfiguration(mainClassId, idConfiguration,  uploadStrategyType, remotePath);
 
         executeSshUpload(mainClassId, remoteSerwerConfiguration, uploadStrategyType, remotePath);
