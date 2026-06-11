@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
 
       - name: Install Mintlify
         run: npm install -g mintlify
@@ -41,7 +41,6 @@ jobs:
           touch out/.nojekyll
 
       - name: Inject Base Path to HTML
-        # Ten krok w locie poprawi linki do wszystkich podstron (kart) bezpośrednio na maszynie budującej GitHub Actions
         run: |
           find ./out -name "*.html" -exec sed -i 's|"/_next|"/App-Instance-Manager/_next|g' {} +
           find ./out -name "*.html" -exec sed -i 's|"_next|"App-Instance-Manager/_next|g' {} +
