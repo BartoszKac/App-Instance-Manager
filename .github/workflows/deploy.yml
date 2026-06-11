@@ -29,17 +29,24 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install Mintlify
-        run: npm install -g mintlify
+      - name: Install Mintlify & Unzip
+        run: |
+          npm install -g mintlify
+          sudo apt-get update && sudo apt-get install -y unzip
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Build Mintlify Docs
-        # Dodaliśmy 'working-directory', żeby skrypt odpalił się tam, gdzie masz docs.json i pliki mdx
+      - name: Build and Unpack Mintlify Docs
         working-directory: ./docs
         run: |
-          mintlify export --out-dir ../out
+          # Eksportujemy do domyślnego ZIP-a
+          mintlify export
+          # Tworzymy czysty folder na zewnątrz
+          mkdir -p ../out
+          # Rozpakowujemy zawartość do folderu out
+          unzip -o export.zip -d ../out
+          # Wrzucamy blokadę Jekylla
           touch ../out/.nojekyll
 
       - name: Inject Base Path to HTML
