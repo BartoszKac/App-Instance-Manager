@@ -36,11 +36,17 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Build Mintlify Docs
-        env:
-          NEXT_PUBLIC_BASE_PATH: /App-Instance-Manager
         run: |
           mintlify export --out-dir out
           touch out/.nojekyll
+
+      - name: Inject Base Path to HTML
+        # Ten krok w locie poprawi linki do wszystkich podstron (kart) bezpośrednio na maszynie budującej GitHub Actions
+        run: |
+          find ./out -name "*.html" -exec sed -i 's|"/_next|"/App-Instance-Manager/_next|g' {} +
+          find ./out -name "*.html" -exec sed -i 's|"_next|"App-Instance-Manager/_next|g' {} +
+          find ./out -name "*.html" -exec sed -i 's|href="/|href="/App-Instance-Manager/|g' {} +
+          find ./out -name "*.html" -exec sed -i 's|href="https://bartoszkac.github.io/|href="https://bartoszkac.github.io/App-Instance-Manager/|g' {} +
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
