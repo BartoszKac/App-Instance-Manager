@@ -36,9 +36,11 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Build Mintlify Docs
+        # Dodaliśmy 'working-directory', żeby skrypt odpalił się tam, gdzie masz docs.json i pliki mdx
+        working-directory: ./docs
         run: |
-          mintlify export --out-dir out
-          touch out/.nojekyll
+          mintlify export --out-dir ../out
+          touch ../out/.nojekyll
 
       - name: Inject Base Path to HTML
         run: |
