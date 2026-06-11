@@ -40,21 +40,10 @@ jobs:
       - name: Build and Unpack Mintlify Docs
         working-directory: ./docs
         run: |
-          # Eksportujemy do domyślnego ZIP-a
           mintlify export
-          # Tworzymy czysty folder na zewnątrz
           mkdir -p ../out
-          # Rozpakowujemy zawartość do folderu out
           unzip -o export.zip -d ../out
-          # Wrzucamy blokadę Jekylla
           touch ../out/.nojekyll
-
-      - name: Inject Base Path to HTML
-        run: |
-          find ./out -name "*.html" -exec sed -i 's|"/_next|"/App-Instance-Manager/_next|g' {} +
-          find ./out -name "*.html" -exec sed -i 's|"_next|"App-Instance-Manager/_next|g' {} +
-          find ./out -name "*.html" -exec sed -i 's|href="/|href="/App-Instance-Manager/|g' {} +
-          find ./out -name "*.html" -exec sed -i 's|href="https://bartoszkac.github.io/|href="https://bartoszkac.github.io/App-Instance-Manager/|g' {} +
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
