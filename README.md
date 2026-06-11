@@ -1,4 +1,5 @@
-BackRunner — A web-based IDE for compiling and running Java, Python, and C++ code dynamically on the server in real time.
+BackRunner — A web-based IDE for compiling and running Java, Python, 
+code dynamically on the server in real time.
 
 🛠️ Tech Stack
 Backend:
@@ -25,6 +26,4 @@ Multi-file Project Support — Manage multiple source files as a single project.
 In-browser Code Editor — Full-featured Monaco Editor (the same engine as VS Code) with syntax highlighting, autocomplete, and formatting built in.
 
 
-📸 Screenshots
 
-<img width="1854" height="918" alt="image" src="https://github.com/user-attachments/assets/ad292152-65ac-464c-a6c2-66b0e4521db9" />
