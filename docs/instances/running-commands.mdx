@@ -1,0 +1,121 @@
+---
+title: "Running Commands on Remote Instances — BackRunner"
+sidebarTitle: "Running Commands"
+description: "Type any shell command into an instance card and run it directly on the remote server — output streams back to the panel without leaving your browser."
+---
+
+Every instance card on the Remote Instances screen includes a built-in command interface that lets you execute arbitrary shell commands on the corresponding remote server, right from your browser. You do not need a separate terminal emulator or SSH client — BackRunner handles the connection transparently and streams the output back to you.
+
+## The Command Input Field
+
+Each instance card contains a single-line text input. In the UI the input shows the placeholder **"Wpisz komendę..."** (Polish for "Enter a command…"). The input is scoped to its card, meaning commands you type in one card only execute on that card's server — you can safely manage multiple instances side by side without them interfering with each other.
+
+<Steps>
+  <Step title="Click the command input">
+    Click anywhere inside the text field on the instance card you want to target. The cursor will appear and you can begin typing immediately.
+  </Step>
+  <Step title="Type your command">
+    Enter any valid shell command you would normally run in an SSH session on that server. The full command string is sent as-is to the remote environment.
+
+    ```bash
+    ls -la /home/ubuntu/app
+    ```
+  </Step>
+  <Step title="Run the command">
+    Either click the blue **Run** button to the right of the input, or press **Enter** on your keyboard. Both actions submit the command immediately.
+
+    <Info>
+      The **Run** button is disabled while the input is empty or contains only whitespace, preventing accidental empty submissions.
+    </Info>
+  </Step>
+  <Step title="Read the output">
+    BackRunner posts your command to the backend, which executes it on the remote server over SSH. The response is written to the instance's output panel. Multi-line output is split into individual lines, each displayed in sequence.
+  </Step>
+</Steps>
+
+## How Command Execution Works
+
+When you run a command, BackRunner sends a `POST` request to:
+
+```http
+POST /api/deploy/program/execute
+```
+
+with the following JSON body:
+
+```json
+{
+  "command": "your command here",
+  "programConfigId": 12
+}
+```
+
+The `programConfigId` is the configuration ID shown on the instance card (the `#` number). BackRunner uses it to look up the correct server credentials and remote context, then opens an SSH session, runs the command, and returns the output as a plain-text response.
+
+<Note>
+  Commands run in the working directory configured when the program was deployed. If you need to target a different path, use an absolute path in your command or change directory with `cd` before running subsequent commands using `&&`.
+</Note>
+
+## Example Commands
+
+The following examples show typical tasks you might run on an instance, regardless of language:
+
+```bash
+# Check what files are in the deployment directory
+ls -la
+
+# Print the current working directory
+pwd
+
+# View disk usage on the server
+df -h
+
+# Check running processes
+ps aux
+
+# Read the last 50 lines of an application log
+tail -50 app.log
+
+# Check available memory
+free -h
+
+# Create a subdirectory
+mkdir -p build/output
+
+# Remove a specific file
+rm -f Main.class
+```
+
+<Tip>
+  You can chain commands using `&&` to run multiple steps in a single submission. For example: `cd /home/ubuntu/app && ls -la` will change directory and list files in one go.
+</Tip>
+
+## Keyboard Shortcut
+
+Pressing **Enter** inside the command input submits the command immediately — the same as clicking **Run**. This makes it quick to issue a series of commands one after another without reaching for the mouse.
+
+## The Kill Button
+
+Inside the [Quick Commands panel](/instances/preset-commands), next to the language-group presets, there is a **Kill** button styled in red. Clicking it fills the command input with:
+
+```bash
+kill $(lsof -t -i)
+```
+
+This command identifies all processes on the server that have open network ports using `lsof`, then sends a `KILL` signal to each of them. You still need to press **Run** (or **Enter**) to actually execute it — clicking **Kill** only fills the input.
+
+<Warning>
+  **The Kill command terminates every process with an open network connection on the remote server.** This includes your own running application, any web servers, database listeners, or other networked services that happen to be active at the time. Use it only when you intentionally want to stop all network-facing processes. On a shared server, this will affect other users' applications as well. There is no undo — killed processes must be restarted manually.
+</Warning>
+
+## Output and Error Handling
+
+Each command submission produces one of three outcomes visible in the output panel:
+
+| Outcome | What you see |
+|---------|-------------|
+| **Success** | The command's stdout, split into lines, displayed in the output area |
+| **HTTP error** | A red error line showing the HTTP status code and any error message returned by the server |
+| **Network error** | A red error line beginning with `Network error:` indicating the request never reached the backend |
+
+If the server returns valid JSON, BackRunner will pretty-print it automatically. Otherwise the raw text output is shown as-is.

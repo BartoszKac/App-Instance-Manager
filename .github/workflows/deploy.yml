@@ -1,0 +1,52 @@
+name: Deploy Mintlify to Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install Mintlify
+        run: npm install -g mintlify
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Build Mintlify Docs
+        env:
+          NEXT_PUBLIC_BASE_PATH: /App-Instance-Manager
+        run: |
+          mintlify export --out-dir out
+          touch out/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './out'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,93 @@
+---
+title: "Remote Instances Screen Overview — BackRunner IDE"
+sidebarTitle: "Overview"
+description: "The Remote Instances screen lists every deployed program as an interactive card, giving you real-time status visibility and direct command access."
+---
+
+The Remote Instances screen is your live dashboard for all remote deployments. Every time you push a project to a server through the Deploy screen, BackRunner creates an **instance** — a record that links a specific source file, its remote path, and the server it lives on. The Remote Instances screen lists every one of those records as a card that you can interact with directly from the browser, without opening a separate SSH client.
+
+## What is an Instance?
+
+An instance represents a single deployed program running (or ready to run) on a remote server. It is uniquely identified by a **configuration ID** that BackRunner assigns when the deployment is first registered. Each instance knows:
+
+- **Which server** the program lives on (by name and remote path)
+- **Which language** the source file uses (inferred from the file extension)
+- **What its current status is** (indicated by a colored dot)
+
+<CardGroup cols={2}>
+  <Card title="Deployed Program" icon="server">
+    The actual source or binary file that was transferred to the remote machine via SSH during the Deploy step.
+  </Card>
+  <Card title="Configuration Record" icon="sliders">
+    The metadata BackRunner keeps — server reference, remote path, upload strategy, and a unique config ID — that lets it target the right server for every command you run.
+  </Card>
+</CardGroup>
+
+## Instance Card Layout
+
+Each instance is rendered as a card in a responsive grid. The card is divided into two main sections: a **header** that summarises the instance, and an **action area** where you type and run commands.
+
+<Steps>
+  <Step title="Status Dot">
+    A small circle in the top-left of the header indicates the instance state at a glance.
+
+    | Color | Meaning |
+    |-------|---------|
+    | 🟢 Green | Online — the server is reachable and the configuration is active |
+    | 🔴 Red | Offline — the server could not be reached |
+  </Step>
+  <Step title="Server Name and Remote Path">
+    Next to the status dot you will see the **server name** (bold) followed by a colon and the **full remote path** of the deployed file, rendered in a monospace font. For example:
+
+    ```text
+    prod-vps-01 : /home/ubuntu/app/Main.java
+    ```
+  </Step>
+  <Step title="Config ID">
+    A small `#` prefixed number (e.g. `#12`) to the right of the path shows the internal configuration ID. You may need this value when querying the API directly or reading server logs.
+  </Step>
+  <Step title="Language Badge">
+    A colour-coded badge in the top-right corner of the card shows the detected language — `JAVA`, `PY`, `CPP`, `TS`, `JS`, `SH`, and so on. BackRunner infers the language from the file extension of the remote path.
+  </Step>
+  <Step title="Command Area">
+    Below the header is a text input paired with a **Run** button. This is where you type shell commands to execute on the remote server. See [Running Commands](/instances/running-commands) for full details.
+  </Step>
+</Steps>
+
+## Navigating to Remote Instances
+
+You can reach the Remote Instances screen from any other screen in BackRunner using the navigation bar at the top of the page. The tab is labelled **Instancje** in the UI (Polish for "Instances") and is always visible in the top navigation bar.
+
+<Steps>
+  <Step title="From the Projects screen">
+    Click the **Instancje** tab in the top navigation bar. BackRunner will load the Remote Instances screen and immediately begin fetching your deployment configurations.
+  </Step>
+  <Step title="From the Deploy screen">
+    Click the **Instancje** tab in the top navigation bar. The breadcrumb at the top will update to show `/ aktywne-instancje` (Polish for "active instances"), confirming you are on the Remote Instances screen.
+  </Step>
+  <Step title="From the Editor">
+    Click the **Instancje** tab that appears in the top navigation bar while a project is open. You do not need to save or close your project first.
+  </Step>
+</Steps>
+
+<Info>
+  BackRunner automatically fetches your instance list when the Remote Instances screen first loads. You do not need to manually trigger a refresh on your first visit.
+</Info>
+
+## Refreshing the Instance List
+
+Instance data is loaded once when the screen opens. If you have deployed a new program, removed a configuration, or want to verify the latest state, click the **⟳ Odśwież** button (Polish for "Refresh") in the top-left of the main content area.
+
+The button label changes to **Ładowanie...** (Polish for "Loading…") while the request is in progress, then reverts once the list has been updated. The refresh calls `fetchInstances`, which fetches both the program configurations and the server records in parallel, then rebuilds all instance cards with the latest data.
+
+<Tip>
+  If an instance you just deployed is not appearing, wait a few seconds and click **⟳ Odśwież**. Newly registered configurations sometimes take a moment to propagate.
+</Tip>
+
+## Error States
+
+If BackRunner cannot reach the backend when loading or refreshing instances, an error banner appears at the top of the content area with a brief description of the problem (for example, a failed HTTP status code or a network timeout). The previously loaded cards, if any, remain visible so you can still interact with instances that were already listed.
+
+<Note>
+  An error banner on the Remote Instances screen means BackRunner could not contact its own backend API — it does **not** necessarily mean your remote servers are unreachable. Check that the BackRunner backend service is running and accessible before concluding that a deployment is broken.
+</Note>

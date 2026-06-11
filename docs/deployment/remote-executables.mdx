@@ -1,0 +1,174 @@
+---
+title: "Remote Executables — Upload and Deploy Pre-Built Binaries"
+sidebarTitle: "Remote Executables"
+description: "Upload pre-compiled binaries to BackRunner without any source code, then deploy them to SSH servers using the REMOTE_EXECUTABLE transfer strategy."
+---
+
+Remote executables are pre-compiled binary files that you upload directly to BackRunner. Unlike the source-code and compiled-code workflows — which start with code you write in the BackRunner editor — a remote executable is an artifact you bring from outside. You might have built it on a local machine, received it from a third party, or compiled it with a specialised toolchain that BackRunner does not provide. Once uploaded, the binary is stored in BackRunner's executable library and can be deployed to any registered SSH server through the same Deploy view you use for all other projects.
+
+## What counts as a remote executable
+
+A remote executable can be any binary file your remote machines can run:
+
+- A compiled **Java** archive or class file packaged outside BackRunner
+- A **Python** script or bundled executable (e.g. produced by PyInstaller)
+- A **C++** compiled binary (`g++` output)
+- A **Bash** shell script
+
+BackRunner does not inspect or validate the binary content. It stores the raw bytes you upload and transfers them verbatim to the target server.
+
+<Info>
+  The maximum upload size for a remote executable is **150 MB**. Files larger than this limit will be rejected by the upload endpoint.
+</Info>
+
+## Uploading a remote executable
+
+Remote executables are uploaded through the dedicated **Upload** screen, which is separate from the Deploy view.
+
+<Steps>
+  <Step title="Open the Upload screen">
+    Navigate to the Upload screen from the main navigation. The screen shows a large drop zone in the centre of the page.
+  </Step>
+  <Step title="Select your binary file">
+    Drag your file from your operating system's file manager and drop it onto the drop zone, **or** click the drop zone to open a standard file picker. After you select a file, its name and size are displayed inside the drop zone.
+
+    To remove the selected file and start over, click the **✕** button that appears alongside the file name.
+  </Step>
+  <Step title="Choose the language / type">
+    Use the **Language / type** dropdown below the drop zone to tell BackRunner what kind of executable you are uploading. The available options are:
+
+    | Option | Use when |
+    |--------|----------|
+    | `Java (.java)` | The file is a Java class or JAR compiled outside BackRunner |
+    | `Python (.py)` | The file is a Python script or PyInstaller bundle |
+    | `C++ (.cpp)` | The file is a compiled C++ binary |
+    | `Bash (.sh)` | The file is a shell script |
+    | `Other / unknown` | The type does not match the options above |
+
+    The language tag is stored alongside the binary and determines how the file is labelled in the Deploy view's Files panel.
+  </Step>
+  <Step title="Click Upload">
+    Click the **Upload** button. A progress bar tracks how much of the file has been transmitted. When the upload succeeds, a green confirmation banner appears: **✓ File uploaded successfully.**
+  </Step>
+  <Step title="Upload another file (optional)">
+    After a successful upload, click **Upload another file** to reset the form and upload an additional binary without leaving the screen.
+  </Step>
+</Steps>
+
+## Upload API reference
+
+The Upload screen sends a multipart `POST` request to the backend:
+
+```http
+POST /api/process/upload
+Content-Type: multipart/form-data
+```
+
+| Part | Type | Description |
+|------|------|-------------|
+| `file` | Binary file | The raw executable bytes |
+| `language` | Query param | One of `JAVA`, `PYTHON`, `CPP`, `BASH`, `UNKNOWN` |
+
+**Example using curl:**
+
+```bash
+curl -X POST "http://localhost:8888/api/process/upload?language=PYTHON" \
+  -F "file=@/path/to/my_app"
+```
+
+A `201 Created` response confirms that the binary has been saved. The backend stores the file's name, language, and raw bytes in the executable library.
+
+You can also upload multiple executables at once using the bulk endpoint:
+
+```http
+POST /api/process/bulk
+Content-Type: application/json
+```
+
+```json
+[
+  { "name": "worker_v2", "language": "CPP",    "contents": "<base64-encoded-bytes>" },
+  { "name": "run.sh",    "language": "BASH",   "contents": "<base64-encoded-bytes>" }
+]
+```
+
+## Viewing uploaded executables
+
+All uploaded executables are listed through the process API:
+
+```http
+GET /api/process
+```
+
+This returns an array of all stored remote executable records, including their IDs, names, and language types. The Deploy view calls this endpoint on load and adds the results to the Files panel under a separate **Processes** section.
+
+## Deploying a remote executable
+
+Once your binary is in the BackRunner executable library, deploying it follows the same workflow as any other project.
+
+<Steps>
+  <Step title="Open the Deploy view">
+    Navigate to the **Deploy** tab. The Files panel on the left lists your uploaded executables under the **Processes** section, alongside your source-code projects.
+  </Step>
+  <Step title="Select the executable">
+    Check the checkbox next to the executable you want to deploy.
+  </Step>
+  <Step title="Set the strategy to REMOTE_EXECUTABLE">
+    In the strategy dropdown on the same row, select **Executable**. This tells BackRunner to retrieve the stored binary from the executable library rather than looking for source or compiled output.
+
+    <Note>
+      BackRunner may not pre-select `REMOTE_EXECUTABLE` for you automatically — always confirm the strategy dropdown shows **Executable** before deploying.
+    </Note>
+  </Step>
+  <Step title="Select target servers">
+    Check one or more servers in the Servers panel on the right.
+  </Step>
+  <Step title="Click Deploy">
+    Review the deployment plan in the center panel and click **Deploy**. BackRunner transfers the binary to each selected server over SSH. The log terminal shows a green check mark for each successful transfer.
+  </Step>
+</Steps>
+
+## Managing executables via the API
+
+In addition to uploading, you can retrieve, update, and delete executables programmatically.
+
+**Get executables by ID:**
+
+```http
+GET /api/process/{id}
+```
+
+Returns an array containing the executable record matching the given ID.
+
+**Replace an executable:**
+
+```http
+PUT /api/process/{id}
+Content-Type: application/json
+
+{
+  "name": "worker_v3",
+  "language": "CPP",
+  "contents": "<base64-encoded-bytes>"
+}
+```
+
+Replaces the stored executable with the new values. All fields (`name`, `language`, and `contents`) are required.
+
+**Delete a single executable:**
+
+```http
+DELETE /api/process/{id}
+```
+
+Returns `204 No Content` on success.
+
+**Delete all executables:**
+
+```http
+DELETE /api/process
+```
+
+<Warning>
+  Deleting an executable from the library removes it permanently. Any future deployment task that references its ID will fail. If you need to re-deploy the same binary later, you must upload it again.
+</Warning>

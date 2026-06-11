@@ -1,0 +1,171 @@
+---
+title: "SSH Server Configuration — BackRunner Deploy Setup"
+sidebarTitle: "Server Config"
+description: "Add, manage, and remove SSH server targets in BackRunner's Servers panel and via the REST API, with automatic OS detection and bulk registration support."
+---
+
+Before you can deploy code to a remote machine, you need to register that machine with BackRunner. A server configuration stores the connection details BackRunner uses to open an SSH session — the host address, port, credentials, and the operating system type. All registered servers appear in the Servers panel on the right side of the Deploy view, where you can select them as deployment targets, add new ones, or delete existing ones.
+
+## Server configuration fields
+
+Each server record holds the following fields:
+
+<ParamField body="name" type="string" required>
+  A human-readable label for the server shown in the Servers panel, for example `Production` or `Dev Node 1`.
+</ParamField>
+
+<ParamField body="ip" type="string" required>
+  The IP address or fully-qualified hostname of the remote machine, for example `192.168.1.100` or `my-server.example.com`.
+</ParamField>
+
+<ParamField body="user" type="string" required>
+  The SSH username BackRunner uses to authenticate. Defaults to `deploy` if left blank when adding a server through the UI.
+</ParamField>
+
+<ParamField body="pass" type="string" required>
+  The SSH password for the account above. BackRunner uses password-based authentication over the SSH connection.
+</ParamField>
+
+<ParamField body="operationSystem" type="string">
+  The operating system of the remote machine. Accepted values are `LINUX`, `WINDOWS`, and `MAC`. BackRunner auto-detects this when you register a server and stores it for use during file path and command resolution. You can leave this blank; it will be populated automatically after the first connection.
+</ParamField>
+
+## Adding a server in the UI
+
+<Steps>
+  <Step title="Open the Servers panel">
+    Navigate to the **Deploy** view. The Servers panel is on the right side of the screen. It lists all currently registered servers.
+  </Step>
+  <Step title="Click Add">
+    Click the **+ Add** button in the Servers panel header. A modal dialog titled **New server** opens.
+  </Step>
+  <Step title="Fill in the connection details">
+    Enter the server name, host or IP address, SSH username, and SSH password in the corresponding fields. Press **Enter** in any field or click **Add** to confirm.
+  </Step>
+  <Step title="Server appears in the list">
+    BackRunner registers the configuration, performs an automatic SSH connection to detect the operating system, and then adds the server to the panel. The OS badge (for example `LINUX`) appears next to the server address once detection completes.
+  </Step>
+</Steps>
+
+<Note>
+  Both the **Name** and **Host / IP** fields are required. BackRunner will not submit the form until both are filled in.
+</Note>
+
+## Selecting servers for deployment
+
+Click the checkbox next to any server in the Servers panel to include it in the next deployment. The panel header shows a count of how many servers are currently selected. You can select multiple servers; BackRunner transfers files to all of them simultaneously.
+
+## Deleting a server
+
+To remove a server, hover over its row in the Servers panel and click the **trash icon** that appears on the right side of the row. The server is immediately removed from both the panel and the BackRunner database.
+
+<Warning>
+  Deleting a server configuration is permanent. Any deployment tasks that referenced the server's configuration ID will no longer resolve. Remove servers only when you are certain they are no longer needed.
+</Warning>
+
+## Managing servers via the REST API
+
+You can register and manage servers programmatically using the BackRunner REST API. This is useful for scripted infrastructure setup or for registering many servers at once.
+
+### Register a single server
+
+Send a `POST` request to `/api/deploy/server` with the server configuration as a JSON body. BackRunner saves the record, auto-detects the OS, and returns the saved configuration including the generated `idConfiguration`.
+
+```http
+POST /api/deploy/server
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Production",
+  "ip": "203.0.113.42",
+  "user": "deploy",
+  "pass": "s3cr3t",
+  "operationSystem": "LINUX"
+}
+```
+
+**Example response:**
+
+```json
+{
+  "idConfiguration": 7,
+  "name": "Production",
+  "ip": "203.0.113.42",
+  "user": "deploy",
+  "pass": "s3cr3t",
+  "operationSystem": "LINUX"
+}
+```
+
+### Retrieve a single server configuration
+
+```http
+GET /api/deploy/server/{idConfiguration}
+```
+
+Returns the server configuration record for the given ID.
+
+### List all registered servers
+
+```http
+GET /api/deploy/servers
+```
+
+Returns an array of all registered server configurations. This is the same endpoint the Deploy view calls on load to populate the Servers panel.
+
+### Bulk registration
+
+If you are setting up a fleet of machines, send a `POST` request to `/api/deploy/server/bulk` with an array of server configuration objects. BackRunner registers all of them and returns `200 OK` with no body.
+
+```http
+POST /api/deploy/server/bulk
+Content-Type: application/json
+```
+
+```json
+[
+  {
+    "name": "Node 1",
+    "ip": "10.0.0.11",
+    "user": "deploy",
+    "pass": "pass1",
+    "operationSystem": "LINUX"
+  },
+  {
+    "name": "Node 2",
+    "ip": "10.0.0.12",
+    "user": "deploy",
+    "pass": "pass2",
+    "operationSystem": "LINUX"
+  },
+  {
+    "name": "Windows Build Server",
+    "ip": "10.0.0.20",
+    "user": "Administrator",
+    "pass": "W!ndows99",
+    "operationSystem": "WINDOWS"
+  }
+]
+```
+
+### Delete a server
+
+```http
+DELETE /api/deploy/server/{idConfiguration}
+```
+
+Returns `204 No Content` on success. The record is permanently removed from the database.
+
+## OS type reference
+
+| Value | Target platform |
+|-------|----------------|
+| `LINUX` | Any Linux distribution (Ubuntu, Debian, CentOS, etc.) |
+| `WINDOWS` | Windows Server or desktop with an SSH daemon installed |
+| `MAC` | macOS with SSH access enabled |
+
+<Tip>
+  If you omit `operationSystem` when registering, BackRunner attempts to auto-detect it by connecting to the server immediately after registration. You can verify the detected value by calling `GET /api/deploy/server/{idConfiguration}` once the registration request completes.
+</Tip>

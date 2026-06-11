@@ -1,0 +1,184 @@
+---
+title: "Using Preset Commands on Remote Instances — BackRunner"
+sidebarTitle: "Preset Commands"
+description: "The Quick Commands panel gives one-click access to language-specific shell commands tailored to your instance's filename — Java, Python, C++, and Node."
+---
+
+Typing long or easily-forgotten commands by hand every time you want to compile, run, or clean a project is tedious. The **Quick Commands** panel on each instance card solves this by offering a curated library of ready-to-use presets, organised by language and toolchain. Clicking any preset fills the command input instantly — you can review the generated command before deciding to run it.
+
+## Opening the Quick Commands Panel
+
+The Quick Commands panel is collapsed by default to keep each card compact. It is independent per card, so you can have the panel open on one instance while it remains closed on another.
+
+<Steps>
+  <Step title="Find the toggle button">
+    Below the command input on any instance card, look for a small button labelled **Szybkie komendy** (Polish for "Quick Commands") with a right-pointing triangle (▶) to its left.
+  </Step>
+  <Step title="Click to expand">
+    Click the button to expand the preset panel. The triangle rotates 90 degrees to point downward, confirming the panel is open.
+  </Step>
+  <Step title="Click again to collapse">
+    Click the same button a second time to hide the preset panel and return the card to its compact state.
+  </Step>
+</Steps>
+
+## Switching Between Language Groups
+
+Once the panel is open, you will see a row of group tabs — one for each supported language category. The active tab is highlighted in blue; all others have a transparent background.
+
+The available groups are:
+
+| Tab | Covers |
+|-----|--------|
+| **Java** | `javac`, Maven, Gradle, and `java` runtime commands |
+| **Python** | `python3`/`python`, `pip`, `venv`, and `pytest` |
+| **Node / TS** | `ts-node`, `tsc`, `node`, and `npm` scripts |
+| **C / C++** | `gcc`, `g++`, binary execution, and `make` |
+| **System** | General-purpose Unix utilities |
+
+Click any tab to switch the preset buttons shown below it. The group selection is per-card and persists while the panel is open. When you first open the panel, the **Java** group is selected by default.
+
+## How Presets Fill the Command Input
+
+Clicking a preset button copies the generated command string directly into the card's command input field. The command **is not executed automatically** — you still need to press **Run** or hit **Enter** to send it to the server. This gives you the chance to inspect or edit the command before it runs.
+
+<Tip>
+  Several presets are **context-aware**: they incorporate the filename of the deployed program into the generated command. For example, if your instance's remote path is `/home/ubuntu/app/HelloWorld.java`, the **javac** preset will fill the input with `javac HelloWorld.java` rather than a generic placeholder.
+</Tip>
+
+## All Presets by Group
+
+The following sections list every preset, the exact command it generates, and whether it uses the instance filename. Commands that include `<filename>` in the description below are context-aware — BackRunner substitutes the actual filename (extracted from the remote path) at the moment you click the button.
+
+<AccordionGroup>
+  <Accordion title="Java">
+    | Preset label | Generated command | Notes |
+    |---|---|---|
+    | `javac` | `javac <filename>` | Compiles the source file (e.g. `javac Main.java`) |
+    | `java run` | `java <classname>` | Runs the compiled class; strips the `.java` extension (e.g. `java Main`) |
+    | `java -jar` | `java -jar <basename>.jar` | Runs a packaged JAR; replaces `.java` with `.jar` (e.g. `java -jar Main.jar`) |
+    | `mvn package` | `mvn clean package` | Runs a full Maven clean-and-package build |
+    | `mvn run` | `mvn spring-boot:run` | Starts a Spring Boot application via Maven |
+    | `gradle build` | `./gradlew build` | Runs the Gradle wrapper build task |
+    | `gradle run` | `./gradlew run` | Runs the application via the Gradle wrapper |
+    | `rm .class` | `rm -f <basename>.class` | Deletes the compiled class file; replaces `.java` with `.class` (e.g. `rm -f Main.class`) |
+
+    **Example — compiling and running `Main.java`:**
+
+    ```bash
+    # Step 1 — click "javac":
+    javac Main.java
+
+    # Step 2 — click "java run":
+    java Main
+    ```
+  </Accordion>
+
+  <Accordion title="Python">
+    | Preset label | Generated command | Notes |
+    |---|---|---|
+    | `python3` | `python3 <filename>` | Runs the script with the system Python 3 interpreter (e.g. `python3 app.py`) |
+    | `python` | `python <filename>` | Runs the script with the `python` alias (Python 2 or a venv) |
+    | `pip install` | `pip3 install -r requirements.txt` | Installs dependencies from `requirements.txt` |
+    | `venv create` | `python3 -m venv venv` | Creates a virtual environment in a `venv/` subdirectory |
+    | `venv activate` | `source venv/bin/activate` | Activates the virtual environment in the current shell |
+    | `pytest` | `pytest` | Runs the full test suite with pytest |
+    | `rm .pyc` | `rm -f <basename>.pyc` | Removes the compiled bytecode cache file; replaces `.py` with `.pyc` |
+
+    **Example — installing dependencies and running `app.py`:**
+
+    ```bash
+    # Install dependencies first:
+    pip3 install -r requirements.txt
+
+    # Then run the script:
+    python3 app.py
+    ```
+  </Accordion>
+
+  <Accordion title="Node / TS">
+    | Preset label | Generated command | Notes |
+    |---|---|---|
+    | `ts-node` | `npx ts-node <filename>` | Executes a TypeScript file directly without a prior compile step |
+    | `tsc` | `npx tsc <filename>` | Compiles a single TypeScript file to JavaScript |
+    | `node run` | `node <filename>` | Runs a JavaScript file with Node.js |
+    | `npm start` | `npm start` | Runs the `start` script defined in `package.json` |
+    | `npm build` | `npm run build` | Runs the `build` script defined in `package.json` |
+    | `npm install` | `npm install` | Installs all Node.js dependencies from `package.json` |
+    | `npm test` | `npm test` | Runs the `test` script defined in `package.json` |
+
+    **Example — installing dependencies and running a TypeScript file:**
+
+    ```bash
+    # Install packages:
+    npm install
+
+    # Run the TypeScript entry point directly:
+    npx ts-node index.ts
+    ```
+  </Accordion>
+
+  <Accordion title="C / C++">
+    | Preset label | Generated command | Notes |
+    |---|---|---|
+    | `gcc` | `gcc -o <basename> <filename>` | Compiles a C source file; output binary is named after the file without its extension |
+    | `g++` | `g++ -o <basename> <filename>` | Compiles a C++ source file; output binary is named after the file without its extension |
+    | `run binary` | `./<basename>` | Executes the compiled binary (no extension, prefixed with `./`) |
+    | `make` | `make` | Runs the default target in the `Makefile` |
+    | `make clean` | `make clean` | Runs the `clean` target to remove build artefacts |
+
+    **Example — compiling and running `hello.cpp`:**
+
+    ```bash
+    # Compile:
+    g++ -o hello hello.cpp
+
+    # Run the binary:
+    ./hello
+    ```
+  </Accordion>
+
+  <Accordion title="System">
+    | Preset label | Generated command | Notes |
+    |---|---|---|
+    | `ls` | `ls -la` | Lists all files in the current directory with permissions and sizes |
+    | `pwd` | `pwd` | Prints the current working directory |
+    | `df` | `df -h` | Shows disk usage in human-readable format |
+    | `ps` | `ps aux` | Lists all running processes with CPU and memory usage |
+    | `top` | `top -bn1 \| head -20` | Captures a one-shot snapshot of the top 20 processes |
+    | `free` | `free -h` | Displays available and used memory in human-readable format |
+    | `mkdir` | `mkdir -p ` | Creates a directory (edit the command to append the path before running) |
+    | `rm -f` | `rm -f ` | Removes a file (edit the command to append the filename before running) |
+
+    <Note>
+      The `mkdir` and `rm -f` presets intentionally end with a trailing space — they are partial templates. After clicking the preset, place your cursor at the end of the filled command and type the directory or file path before pressing **Run**.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## The Kill Preset
+
+At the far right of the preset button row (visible in every language group), there is a red-bordered **Kill** button. It is not part of any language group — it is always present when the Quick Commands panel is open.
+
+Clicking **Kill** fills the command input with:
+
+```bash
+kill $(lsof -t -i)
+```
+
+<Warning>
+  **This command kills every process on the server that has an open network port.** It uses `lsof` to find process IDs bound to any network interface, then sends them a `KILL` signal. This will terminate your running application and any other networked service on the same machine — including databases, web servers, and monitoring agents. Use it only when you need to forcefully stop all network activity on an instance. Killed processes must be restarted manually.
+</Warning>
+
+## Context-Aware Filename Substitution
+
+BackRunner resolves the filename at click time by taking the last segment of the instance's **remote path** — the same path shown on the instance card. For example:
+
+| Remote path | Resolved filename | Used in |
+|---|---|---|
+| `/home/ubuntu/app/Main.java` | `Main.java` | `javac`, `java run`, `java -jar`, `rm .class` |
+| `/srv/scripts/analyse.py` | `analyse.py` | `python3`, `python`, `rm .pyc` |
+| `/opt/api/server.ts` | `server.ts` | `ts-node`, `tsc`, `node run` |
+| `/home/pi/sensors/read.cpp` | `read.cpp` | `gcc`, `g++`, `run binary` |
+
+If the remote path is unusual or the extension is unrecognised, the filename is still substituted correctly — but the generated command may need manual adjustment before you run it.

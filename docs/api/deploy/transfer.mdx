@@ -1,0 +1,112 @@
+---
+title: "Transfer — Deploy Code to Remote Servers via SSH/SCP"
+sidebarTitle: "Transfer"
+description: "Transfer source files, compiled artefacts, or executables from BackRunner to one or more remote servers using configurable upload strategies."
+---
+
+The Transfer API moves your project files from the BackRunner host to one or more remote servers over SSH/SCP. Each transfer is described by three pieces of information: the project to transfer (`mainClassId`), the destination server (`idConfiguration`), and the upload strategy that controls what gets sent.
+
+## Upload strategies
+
+| Value | What is transferred |
+|-------|---------------------|
+| `SOURCE_CODE` | The raw `.java`, `.py`, `.cpp`, or `.sh` source files for the project. Use this when the remote server has its own compiler or interpreter and you want to build or run there. |
+| `COMPILED_CODE` | The compiled output artefacts produced by BackRunner's build step. Use this when you want to ship a pre-built binary or bytecode to the remote host. |
+| `REMOTE_EXECUTABLE` | Triggers building a self-contained executable on the remote server directly, without uploading local files first. Use this when the remote environment should control the entire build. |
+
+<Note>
+  Before transferring, ensure the target server is registered. See [Servers](/api/deploy/servers) for registration instructions.
+</Note>
+
+---
+
+## POST /api/deploy/transfer/single
+
+Transfers a single project to a single server using the specified strategy.
+
+### Query parameters
+
+<ParamField query="mainClassId" type="Long" required>
+  The identifier of the project to transfer.
+</ParamField>
+
+<ParamField query="idConfiguration" type="Long" required>
+  The `idConfiguration` of the target remote server.
+</ParamField>
+
+<ParamField query="strategy" type="UploadStrategyType" required>
+  The upload strategy. One of: `SOURCE_CODE`, `COMPILED_CODE`, `REMOTE_EXECUTABLE`.
+</ParamField>
+
+### Response
+
+Returns `200 OK` with an empty body when the transfer completes successfully.
+
+```bash
+curl -X POST \
+  "http://localhost:8888/api/deploy/transfer/single?mainClassId=1&idConfiguration=1&strategy=COMPILED_CODE"
+```
+
+```
+HTTP/1.1 200 OK
+```
+
+---
+
+## POST /api/deploy/transfer/bulk
+
+Transfers multiple projects to multiple servers in a single request. Each item in the list is an independent transfer task with its own project, server, and strategy.
+
+### Request body
+
+A JSON array of `TransferTask` objects.
+
+<ParamField body="mainClassId" type="Long" required>
+  The identifier of the project to transfer.
+</ParamField>
+
+<ParamField body="configurationId" type="Long" required>
+  The `idConfiguration` of the target remote server.
+</ParamField>
+
+<ParamField body="uploadStrategyType" type="UploadStrategyType" required>
+  The upload strategy for this task. One of: `SOURCE_CODE`, `COMPILED_CODE`, `REMOTE_EXECUTABLE`.
+</ParamField>
+
+### Response
+
+Returns `200 OK` with an empty body when all tasks have been processed.
+
+```bash
+curl -X POST http://localhost:8888/api/deploy/transfer/bulk \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "mainClassId": 1,
+      "configurationId": 1,
+      "uploadStrategyType": "COMPILED_CODE"
+    },
+    {
+      "mainClassId": 3,
+      "configurationId": 2,
+      "uploadStrategyType": "SOURCE_CODE"
+    },
+    {
+      "mainClassId": 5,
+      "configurationId": 1,
+      "uploadStrategyType": "REMOTE_EXECUTABLE"
+    }
+  ]'
+```
+
+```
+HTTP/1.1 200 OK
+```
+
+<Warning>
+  Bulk transfers are executed sequentially. If one task fails, the remaining tasks in the list may still be attempted. Check your server logs for per-task failure details.
+</Warning>
+
+<Tip>
+  Use `POST /api/deploy/transfer/bulk` to deploy all of your projects to a new server in a single operation after registering it via `POST /api/deploy/server`.
+</Tip>

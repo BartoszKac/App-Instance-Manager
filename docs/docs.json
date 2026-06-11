@@ -1,0 +1,95 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "BackRunner",
+  "theme": "luma",
+  "colors": {
+    "primary": "#3b82f6",
+    "light": "#93c5fd",
+    "dark": "#1d4ed8"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "self-hosting"
+            ]
+          },
+          {
+            "group": "Editor",
+            "pages": [
+              "editor/projects",
+              "editor/writing-code",
+              "editor/compilation",
+              "editor/real-time-output"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/overview",
+              "deployment/server-configuration",
+              "deployment/transfer-strategies",
+              "deployment/remote-executables"
+            ]
+          },
+          {
+            "group": "Instances",
+            "pages": [
+              "instances/overview",
+              "instances/running-commands",
+              "instances/preset-commands"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/supported-languages",
+              "reference/websocket",
+              "reference/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Code API",
+            "pages": [
+              "api/code/overview",
+              "api/code/source",
+              "api/code/compile",
+              "api/code/launch"
+            ]
+          },
+          {
+            "group": "Deploy API",
+            "pages": [
+              "api/deploy/servers",
+              "api/deploy/programs",
+              "api/deploy/transfer"
+            ]
+          },
+          {
+            "group": "Process API",
+            "pages": [
+              "api/process/executables"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/BartoszKac/App-Instance-Manager"
+    }
+  }
+}

@@ -1,0 +1,223 @@
+---
+title: "Servers — Register and Manage Deployment Targets"
+sidebarTitle: "Servers"
+description: "Register, retrieve, and remove remote server configurations that BackRunner uses as deployment targets for compiled programs and source transfers."
+---
+
+A **remote server configuration** holds the SSH connection details BackRunner needs to connect to a target host when deploying or executing programs. You register one or more servers with the Deploy API, and then reference them by `idConfiguration` when setting up transfers or program executions.
+
+---
+
+## GET /api/deploy/servers
+
+Returns every registered remote server configuration.
+
+### Response
+
+Returns a `List<RemoteSerwerConfiguration>`.
+
+<ResponseField name="idConfiguration" type="Long">
+  Auto-generated primary key for this server record.
+</ResponseField>
+
+<ResponseField name="name" type="String">
+  Human-readable label for the server (e.g. `"production-eu-1"`).
+</ResponseField>
+
+<ResponseField name="ip" type="String">
+  IP address or hostname of the remote server.
+</ResponseField>
+
+<ResponseField name="user" type="String">
+  SSH username used to authenticate against the remote server.
+</ResponseField>
+
+<ResponseField name="pass" type="String">
+  SSH password for the specified user.
+</ResponseField>
+
+<ResponseField name="operationSystem" type="OperationSystem">
+  Optional. Target OS. One of: `LINUX`, `WINDOWS`, `MAC`. May be `null` if not set.
+</ResponseField>
+
+```bash
+curl http://localhost:8888/api/deploy/servers
+```
+
+```json
+[
+  {
+    "idConfiguration": 1,
+    "name": "production-eu-1",
+    "ip": "192.168.1.100",
+    "user": "deploy",
+    "pass": "s3cur3p@ss",
+    "operationSystem": "LINUX"
+  },
+  {
+    "idConfiguration": 2,
+    "name": "staging-us",
+    "ip": "10.0.0.55",
+    "user": "admin",
+    "pass": "adminpass",
+    "operationSystem": null
+  }
+]
+```
+
+---
+
+## POST /api/deploy/server
+
+Registers a single new remote server configuration. BackRunner validates the connection details and persists the record.
+
+### Request body
+
+<ParamField body="name" type="String" required>
+  A human-readable label for this server.
+</ParamField>
+
+<ParamField body="ip" type="String" required>
+  IP address or hostname of the remote server.
+</ParamField>
+
+<ParamField body="user" type="String" required>
+  SSH username.
+</ParamField>
+
+<ParamField body="pass" type="String" required>
+  SSH password.
+</ParamField>
+
+<ParamField body="operationSystem" type="OperationSystem">
+  Optional. One of: `LINUX`, `WINDOWS`, `MAC`.
+</ParamField>
+
+### Response
+
+Returns the saved `RemoteSerwerConfiguration` object including the generated `idConfiguration`.
+
+```bash
+curl -X POST http://localhost:8888/api/deploy/server \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "production-eu-1",
+    "ip": "192.168.1.100",
+    "user": "deploy",
+    "pass": "s3cur3p@ss",
+    "operationSystem": "LINUX"
+  }'
+```
+
+```json
+{
+  "idConfiguration": 1,
+  "name": "production-eu-1",
+  "ip": "192.168.1.100",
+  "user": "deploy",
+  "pass": "s3cur3p@ss",
+  "operationSystem": "LINUX"
+}
+```
+
+<Warning>
+  Passwords are stored and returned in plain text. Secure your BackRunner instance at the network level and rotate credentials regularly.
+</Warning>
+
+---
+
+## POST /api/deploy/server/bulk
+
+Registers multiple remote server configurations in a single request.
+
+### Request body
+
+A JSON array of `RemoteSerwerConfiguration` objects. Each object uses the same fields as the single-register endpoint above.
+
+### Response
+
+Returns `200 OK` with an empty body when all records are saved successfully.
+
+```bash
+curl -X POST http://localhost:8888/api/deploy/server/bulk \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "name": "production-eu-1",
+      "ip": "192.168.1.100",
+      "user": "deploy",
+      "pass": "s3cur3p@ss",
+      "operationSystem": "LINUX"
+    },
+    {
+      "name": "staging-us",
+      "ip": "10.0.0.55",
+      "user": "admin",
+      "pass": "adminpass",
+      "operationSystem": null
+    }
+  ]'
+```
+
+```
+HTTP/1.1 200 OK
+```
+
+---
+
+## GET /api/deploy/server/{idConfiguration}
+
+Returns a single server configuration by its ID.
+
+### Path parameters
+
+<ParamField path="idConfiguration" type="Long" required>
+  The `idConfiguration` of the server record to retrieve.
+</ParamField>
+
+### Response
+
+Returns a single `RemoteSerwerConfiguration` object.
+
+```bash
+curl http://localhost:8888/api/deploy/server/1
+```
+
+```json
+{
+  "idConfiguration": 1,
+  "name": "production-eu-1",
+  "ip": "192.168.1.100",
+  "user": "deploy",
+  "pass": "s3cur3p@ss",
+  "operationSystem": "LINUX"
+}
+```
+
+---
+
+## DELETE /api/deploy/server/{idConfiguration}
+
+Permanently removes a server configuration from BackRunner.
+
+<Warning>
+  Deleting a server configuration does not remove any program configurations or transfer history that references it. Remove dependent records first to avoid orphaned configurations.
+</Warning>
+
+### Path parameters
+
+<ParamField path="idConfiguration" type="Long" required>
+  The `idConfiguration` of the server record to delete.
+</ParamField>
+
+### Response
+
+Returns `204 No Content` with an empty body on success.
+
+```bash
+curl -X DELETE http://localhost:8888/api/deploy/server/1
+```
+
+```
+HTTP/1.1 204 No Content
+```

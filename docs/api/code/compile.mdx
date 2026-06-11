@@ -1,0 +1,101 @@
+---
+title: "Compile — Trigger Project Builds and Get Results"
+sidebarTitle: "Compile"
+description: "Trigger compilation for all source files in a BackRunner project and retrieve the resulting compiled artefacts with their name, code, and language."
+---
+
+BackRunner compiles your project on the server side using the language toolchain that matches the project's `LanguageType`. When you trigger compilation, BackRunner processes every source file in the project and stores a `CompiledCode` record for each one. You can then retrieve those records to inspect the compiled output.
+
+## Compilation flow
+
+1. **Save your source files** using `POST /api/code/source` or `PUT /api/code/source`.
+2. **Trigger compilation** via `POST /api/code/compile/all/main-class/{idMainClass}`.
+3. **Fetch compiled artefacts** with `GET /api/code/compiled/main-class/{idMainClass}` to confirm the build produced output.
+4. **Launch the app** once compilation succeeds — see [Launch](/api/code/launch).
+
+---
+
+## POST /api/code/compile/all/main-class/{idMainClass}
+
+Triggers compilation for all source files that belong to the project identified by `idMainClass`.
+
+### Path parameters
+
+<ParamField path="idMainClass" type="Long" required>
+  The project identifier. All source files with this `idManClass` value will be compiled.
+</ParamField>
+
+### Response
+
+Returns a plain `String` describing the result or status of the compilation request. The response body is not JSON.
+
+```bash
+curl -X POST http://localhost:8888/api/code/compile/all/main-class/1
+```
+
+```
+Compilation started
+```
+
+---
+
+## GET /api/code/compiled/main-class/{idMainClass}
+
+Returns the list of compiled artefacts for a project. Each `CompiledCode` record corresponds to one compiled output file and carries the file name, compiled content, language, and the project it belongs to.
+
+### Path parameters
+
+<ParamField path="idMainClass" type="Long" required>
+  The project identifier to fetch compiled results for.
+</ParamField>
+
+### Response
+
+Returns a `List<CompiledCode>`.
+
+<ResponseField name="idCode" type="Long">
+  Auto-generated primary key for the compiled record.
+</ResponseField>
+
+<ResponseField name="name" type="String">
+  Output file name produced by the compiler, e.g. `Main.class`.
+</ResponseField>
+
+<ResponseField name="code" type="String">
+  Compiled output content stored by BackRunner.
+</ResponseField>
+
+<ResponseField name="language" type="LanguageType">
+  Language of the source file that produced this artefact. One of `JAVA`, `PYTHON`, `CPP`, `BASH`, `UNKNOWN`.
+</ResponseField>
+
+<ResponseField name="idManClass" type="Long">
+  Project identifier — matches the `idMainClass` path parameter you queried.
+</ResponseField>
+
+```bash
+curl http://localhost:8888/api/code/compiled/main-class/1
+```
+
+```json
+[
+  {
+    "idCode": 10,
+    "name": "Main.class",
+    "code": "<compiled-output>",
+    "language": "JAVA",
+    "idManClass": 1
+  },
+  {
+    "idCode": 11,
+    "name": "Helper.class",
+    "code": "<compiled-output>",
+    "language": "JAVA",
+    "idManClass": 1
+  }
+]
+```
+
+<Tip>
+  If the compiled artefacts list is empty after triggering a build, check that your source files were saved correctly with `GET /api/code/source/main-class/{idMainClass}` before re-triggering compilation.
+</Tip>

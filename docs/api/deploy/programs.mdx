@@ -1,0 +1,136 @@
+---
+title: "Programs — Configure and Execute Remote Programs"
+sidebarTitle: "Programs"
+description: "Retrieve remote program configurations and trigger SSH command execution on target servers using the BackRunner Deploy Programs API."
+---
+
+A **remote program configuration** describes how a specific BackRunner project is deployed on a particular remote server — which server it lives on, where the files were placed, and what deployment strategy was used to get them there. BackRunner creates or updates this record automatically when you run a transfer. You use the configuration's ID when you want to execute the program remotely.
+
+---
+
+## GET /api/deploy/programs
+
+Returns all remote program configurations across every project and server.
+
+### Response
+
+Returns a `List<RemoteProgramConfiguration>`.
+
+<ResponseField name="idConfiguration" type="Long">
+  Auto-generated primary key for this program configuration.
+</ResponseField>
+
+<ResponseField name="idSerwer" type="Long">
+  The `idConfiguration` of the remote server where this program is deployed.
+</ResponseField>
+
+<ResponseField name="uploadStrategyType" type="UploadStrategyType">
+  The strategy used to transfer this program. One of: `SOURCE_CODE`, `COMPILED_CODE`, `REMOTE_EXECUTABLE`.
+</ResponseField>
+
+<ResponseField name="pathInServer" type="String">
+  Absolute path on the remote server where the program files were placed.
+</ResponseField>
+
+<ResponseField name="idCode" type="Long">
+  The project identifier (`mainClassId`) of the BackRunner project that was deployed.
+</ResponseField>
+
+```bash
+curl http://localhost:8888/api/deploy/programs
+```
+
+```json
+[
+  {
+    "idConfiguration": 1,
+    "idSerwer": 1,
+    "uploadStrategyType": "COMPILED_CODE",
+    "pathInServer": "/home/deploy/apps/project-1",
+    "idCode": 1
+  },
+  {
+    "idConfiguration": 2,
+    "idSerwer": 2,
+    "uploadStrategyType": "SOURCE_CODE",
+    "pathInServer": "/opt/backrunner/projects/project-3",
+    "idCode": 3
+  }
+]
+```
+
+---
+
+## GET /api/deploy/program/{mainClassId}
+
+Returns the remote program configuration for a specific project, identified by its `mainClassId`.
+
+### Path parameters
+
+<ParamField path="mainClassId" type="Long" required>
+  The project identifier whose program configuration you want to retrieve.
+</ParamField>
+
+### Response
+
+Returns a single `RemoteProgramConfiguration` object.
+
+```bash
+curl http://localhost:8888/api/deploy/program/1
+```
+
+```json
+{
+  "idConfiguration": 1,
+  "idSerwer": 1,
+  "uploadStrategyType": "COMPILED_CODE",
+  "pathInServer": "/home/deploy/apps/project-1",
+  "idCode": 1
+}
+```
+
+<Note>
+  If the project has been transferred to multiple servers, this endpoint returns the most recently created configuration for that project. Use `GET /api/deploy/programs` to see all configurations.
+</Note>
+
+---
+
+## POST /api/deploy/program/execute
+
+Executes a shell command on the remote server associated with a program configuration. BackRunner connects to the server via SSH and runs the command you provide.
+
+### Request body
+
+<ParamField body="command" type="String" required>
+  The shell command to run on the remote server. For example: `"java -jar /home/deploy/apps/project-1/Main.jar"`.
+</ParamField>
+
+<ParamField body="programConfigId" type="Long" required>
+  The `idConfiguration` of the program configuration that identifies which server and path to use.
+</ParamField>
+
+### Response
+
+Returns a plain `String` containing the combined stdout/stderr output of the executed command.
+
+```bash
+curl -X POST http://localhost:8888/api/deploy/program/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "java -jar /home/deploy/apps/project-1/Main.jar",
+    "programConfigId": 1
+  }'
+```
+
+```
+Hello, BackRunner!
+Process exited with code 0
+```
+
+<Warning>
+  The `command` field is passed directly to the remote shell. Validate and sanitize any user-supplied input before forwarding it to this endpoint to prevent command injection.
+</Warning>
+
+<Tip>
+  To run a Python project, use a command like `"python3 /opt/backrunner/projects/project-3/main.py"`. For C++ binaries, use the path to the compiled executable, e.g. `"/home/deploy/apps/project-2/main"`.
+</Tip>

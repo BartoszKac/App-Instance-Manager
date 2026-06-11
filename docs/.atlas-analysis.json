@@ -1,0 +1,125 @@
+{
+  "projectType": "saas",
+  "projectName": "BackRunner",
+  "projectDescription": "A web-based IDE for writing, compiling, and running Java, Python, and C++ code on a remote server in real time — with built-in deployment to remote machines via SSH.",
+  "theme": "luma",
+  "primaryColor": "#3b82f6",
+  "lightColor": "#93c5fd",
+  "darkColor": "#1d4ed8",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "self-hosting"
+            ]
+          },
+          {
+            "group": "Editor",
+            "pages": [
+              "editor/projects",
+              "editor/writing-code",
+              "editor/compilation",
+              "editor/real-time-output"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/overview",
+              "deployment/server-configuration",
+              "deployment/transfer-strategies",
+              "deployment/remote-executables"
+            ]
+          },
+          {
+            "group": "Instances",
+            "pages": [
+              "instances/overview",
+              "instances/running-commands",
+              "instances/preset-commands"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/supported-languages",
+              "reference/websocket",
+              "reference/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Code API",
+            "pages": [
+              "api/code/overview",
+              "api/code/source",
+              "api/code/compile",
+              "api/code/launch"
+            ]
+          },
+          {
+            "group": "Deploy API",
+            "pages": [
+              "api/deploy/servers",
+              "api/deploy/programs",
+              "api/deploy/transfer"
+            ]
+          },
+          {
+            "group": "Process API",
+            "pages": [
+              "api/process/executables"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "In-browser Monaco Editor with syntax highlighting and autocomplete (Java, Python, C++, Bash)",
+    "Server-side dynamic compilation and execution without restarting the application",
+    "Real-time output streaming via WebSocket (STOMP over SockJS)",
+    "Multi-file project support with a single entry-point model",
+    "SSH-based deployment to remote servers (source code, compiled code, or pre-built executables)",
+    "Remote instance management with command execution and preset command groups",
+    "File upload for pre-compiled binaries and remote executables",
+    "Built-in terminal panel for live stdout/stderr output"
+  ],
+  "publicApiSurface": [
+    "GET /api/code/source/main-class/{idMainClass}",
+    "POST /api/code/source",
+    "PUT /api/code/source",
+    "POST /api/code/compile/all/main-class/{idMainClass}",
+    "POST /api/code/launch/main-class/{idMainClass}",
+    "GET /api/code/compiled/main-class/{idMainClass}",
+    "DELETE /api/code/project/{idMainClass}",
+    "GET /api/deploy/servers",
+    "POST /api/deploy/server",
+    "POST /api/deploy/server/bulk",
+    "GET /api/deploy/server/{idConfiguration}",
+    "DELETE /api/deploy/server/{idConfiguration}",
+    "GET /api/deploy/programs",
+    "GET /api/deploy/program/{mainClassId}",
+    "POST /api/deploy/program/execute",
+    "POST /api/deploy/transfer/bulk",
+    "POST /api/deploy/transfer/single",
+    "GET /api/process",
+    "POST /api/process/upload",
+    "POST /api/process/bulk",
+    "GET /api/process/{id}",
+    "PUT /api/process/{id}",
+    "DELETE /api/process/{id}",
+    "WebSocket endpoint: /ws-console (STOMP)",
+    "WebSocket topic: /topic/output"
+  ]
+}

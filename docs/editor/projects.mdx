@@ -1,0 +1,68 @@
+---
+title: "Creating and Organizing Code Projects in BackRunner"
+sidebarTitle: "Projects"
+description: "Create and manage code projects in Java, Python, C++, and Bash — search, filter by language, and open any workspace from one screen."
+---
+
+The Projects screen is your home base in BackRunner. Every time you open the application you land here, where all of your saved workspaces are displayed as cards in a responsive grid. From this single screen you can create a brand-new project, jump back into an existing one, narrow the list down by language or keyword, and delete projects you no longer need.
+
+## Supported languages
+
+BackRunner supports four languages, each mapped to a specific file extension. When you create a project, the entry-point file is named after your project using that extension.
+
+| Language | Extension |
+|----------|-----------|
+| Java     | `.java`   |
+| Python   | `.py`     |
+| C++      | `.cpp`    |
+| Bash     | `.sh`     |
+
+## Creating a new project
+
+Click the **+ New Project** button in the top-right corner of the toolbar to open the New Project dialog. You can also press the identical button that appears inside the filter toolbar.
+
+<Steps>
+  <Step title="Enter a project name">
+    Type a name in the **Project name** field. The name must not be empty — the **Create** button stays inactive until you provide one. You can also press `Enter` to confirm immediately.
+  </Step>
+  <Step title="Add an optional description">
+    Fill in the **Description** field with a short note about what the project does. This field is optional and can be left blank.
+  </Step>
+  <Step title="Choose a language">
+    Select one of the four supported languages from the **Language** dropdown: **Java**, **Python**, **C++**, or **Bash**. The default selection is Java.
+  </Step>
+  <Step title="Confirm creation">
+    Click **Create**. BackRunner immediately creates the project, adds it to the top of your project list, and opens the editor for that project with the entry-point file ready to edit.
+  </Step>
+</Steps>
+
+<Note>
+  The first file created for your project is also its **entry point** — the file the compiler and runtime use as the starting class or script. Its name is derived from your project name and the chosen language extension (for example, a Java project called `hello-world` starts with a file named `hello-world.java`).
+</Note>
+
+## Opening an existing project
+
+Click anywhere on a project card to open the editor for that project. BackRunner loads all source files associated with the project from the server and drops you straight into the Monaco editor.
+
+## Searching and filtering projects
+
+The toolbar above the project grid provides two ways to narrow the list:
+
+<CardGroup cols={2}>
+  <Card title="Search by name" icon="magnifying-glass">
+    Type any part of a project name or description into the **Search** box on the left. The grid updates in real time as you type, showing only projects whose name or description contains your query.
+  </Card>
+  <Card title="Filter by language" icon="filter">
+    Click one of the language filter tabs — **All**, **Java**, **Python**, **C++**, or **Bash** — to show only projects written in that language. The active filter tab is highlighted. Click **All** to remove the filter.
+  </Card>
+</CardGroup>
+
+You can combine search and language filter at the same time. For example, selecting **Java** and typing `parser` shows only Java projects whose name or description includes "parser".
+
+## Deleting a project
+
+<Warning>
+  Deleting a project permanently removes all of its source files and compiled output from the server. This action cannot be undone.
+</Warning>
+
+To delete a project, open it in the editor and use the project management options available there. Deletion sends a `DELETE /api/code/project/{idMainClass}` request to the backend and removes every source file linked to that project.

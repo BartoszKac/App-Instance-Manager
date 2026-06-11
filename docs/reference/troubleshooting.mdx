@@ -1,0 +1,166 @@
+---
+title: "Troubleshooting Common BackRunner Issues"
+sidebarTitle: "Troubleshooting"
+description: "Solutions for the most common BackRunner problems — connection failures, WebSocket drops, compile errors, upload limits, SSH deploy failures, and more."
+---
+
+Most BackRunner issues fall into one of a small number of categories: the backend server is not reachable, the WebSocket connection has dropped, a required compiler is missing on the server, or a configuration limit has been hit. Work through the relevant section below to diagnose and fix the problem quickly.
+
+<AccordionGroup>
+
+  <Accordion title="Cannot connect to BackRunner" icon="plug">
+    If the BackRunner UI fails to load, or API calls return network errors, the backend server is likely not running or is listening on the wrong address.
+
+    **What to check:**
+
+    1. Confirm the backend process is running. On the server machine, look for the Java process that hosts the BackRunner backend:
+       ```bash
+       ps aux | grep backrunner
+       # or, if you launched the JAR directly, look for any java process
+       ps aux | grep java
+       # on Windows
+       tasklist | findstr java
+       ```
+    2. Verify the server is listening on port **8888** — the port configured in `application.properties`:
+       ```bash
+       lsof -i :8888
+       # or
+       netstat -an | grep 8888
+       ```
+    3. Check that your browser is pointed at the correct host. The default local address is `http://localhost:8888`. If BackRunner is deployed on a remote machine, replace `localhost` with the server's IP or hostname.
+    4. Make sure no firewall rule is blocking port 8888 inbound. On Linux you can temporarily test with:
+       ```bash
+       sudo ufw allow 8888/tcp
+       ```
+
+    <Warning>
+      BackRunner does not use HTTPS by default. If your browser forces HTTPS on all connections, you may need to add a security exception or configure a reverse proxy (e.g. nginx) to terminate TLS in front of the backend.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="WebSocket terminal shows 'disconnected'" icon="wifi-slash">
+    The OUTPUT panel in the BackRunner IDE connects to the backend over a STOMP/SockJS WebSocket at `http://localhost:8888/ws-console`. A "disconnected" status means the STOMP handshake failed or the connection was lost after it was established.
+
+    **How to reconnect:**
+
+    1. Click the **Connect** button in the OUTPUT panel title bar. The status indicator will turn amber while the handshake is in progress and green once it succeeds.
+    2. If the connection attempt fails immediately, open your browser's developer console (F12) and look for STOMP or SockJS error messages. A `ERR_CONNECTION_REFUSED` error confirms the backend is not reachable — see the *Cannot connect to BackRunner* section above.
+    3. If you were previously connected and the terminal dropped mid-session, the backend may have restarted. Wait a few seconds for the server to finish starting up, then click **Connect** again.
+    4. Some browser extensions (ad-blockers, privacy tools) intercept WebSocket upgrades. Try connecting in a private/incognito window with extensions disabled to rule this out.
+
+    <Tip>
+      If your network sits behind a proxy that blocks native WebSockets, SockJS will automatically negotiate an HTTP long-polling fallback. You should still see a successful connection — just with slightly higher latency.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Compilation fails" icon="xmark-circle">
+    A failed compile shows the compiler's error output in the OUTPUT panel. There are two common root causes: the required compiler binary is missing on the server, or your source code contains syntax errors.
+
+    **Compiler not found:**
+
+    - **Java:** Ensure a JDK (not just a JRE) is installed and `javac` is on the system `PATH`. BackRunner targets Java 17 — verify with `javac --version`.
+      ```bash
+      javac --version   # should print: javac 17.x.x
+      ```
+    - **C++:** Ensure `g++` is installed. If it lives at a non-standard path, set the `GPP_PATH` environment variable before starting the BackRunner backend:
+      ```bash
+      export GPP_PATH=/usr/local/bin/g++
+      ```
+      Then restart the server so it picks up the new variable.
+    - **Python / Bash:** These languages do not compile — if you see an error here it is a runtime error, not a missing compiler.
+
+    **Syntax errors in your code:**
+
+    The full compiler diagnostic is forwarded to the OUTPUT panel exactly as the compiler produced it. Read the file name and line number from the error, fix the issue in the editor, and click **Run** again.
+
+    <Note>
+      For Java projects, all `.java` files in the project are compiled together in a single `javac` invocation. A syntax error in *any* file — not just the entry point — will cause the entire build to fail.
+    </Note>
+  </Accordion>
+
+  <Accordion title="File upload fails or is rejected" icon="file-circle-xmark">
+    BackRunner enforces a **150 MB** limit on both individual file uploads and the total HTTP request size. Exceeding this limit causes the server to reject the upload with an HTTP `413` (Payload Too Large) error.
+
+    **What to do:**
+
+    1. Check the size of the file(s) you are uploading. The hard limits are:
+       - Single file: **150 MB**
+       - Entire HTTP request (file + form fields): **150 MB**
+    2. If your project genuinely requires files larger than 150 MB, you need to adjust the following properties in `application.properties` on the server and restart:
+       ```properties
+       spring.servlet.multipart.max-file-size=150MB
+       spring.servlet.multipart.max-request-size=150MB
+       server.tomcat.max-http-form-post-size=150MB
+       ```
+       Increase all three values to the same limit to avoid partial-upload errors.
+    3. If the upload is well under 150 MB but still fails, check the server logs for a more specific error — a disk-full condition or a permissions problem on the upload directory can produce similar symptoms.
+
+    <Warning>
+      All three Tomcat/Spring multipart properties must be set to the **same value**. Setting only one or two of them will still cause rejections when the omitted limit is lower than the file size.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="SSH deployment fails" icon="server">
+    BackRunner can deploy your project to a remote server over SSH. If the deployment step fails, the cause is almost always incorrect credentials or a network connectivity problem.
+
+    **Common causes and fixes:**
+
+    1. **Wrong username or password:** Double-check the SSH credentials you entered in the deploy dialog. Passwords are case-sensitive. If you use key-based authentication, confirm the private key file path is correct and the key has not expired.
+    2. **Wrong hostname or IP address:** Verify the target server's address. Try connecting from the terminal of the machine running BackRunner first to confirm basic SSH reachability:
+       ```bash
+       ssh user@your-server-ip
+       ```
+    3. **Server unreachable:** Confirm the target server is running and port 22 is open. Firewalls on either end (the BackRunner host or the target server) can silently block SSH traffic:
+       ```bash
+       nc -zv your-server-ip 22
+       ```
+    4. **Host key verification failure:** If the target server's host key has changed (e.g. after a rebuild), SSH will refuse to connect. Remove the stale entry from `~/.ssh/known_hosts` on the BackRunner server:
+       ```bash
+       ssh-keygen -R your-server-ip
+       ```
+
+    <Tip>
+      Run a manual `ssh` test from the BackRunner server to your deployment target before using the IDE deploy feature. Any connection error you see in the terminal will have a more detailed message than the IDE's deploy error dialog.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Output panel is empty after running" icon="square-terminal">
+    If you click **Run** and nothing appears in the OUTPUT panel, the most likely cause is that the WebSocket connection to `/topic/output` was not established before or during the run.
+
+    **Steps to resolve:**
+
+    1. Check the status indicator in the OUTPUT panel title bar. If it is **red** (disconnected), click **Connect** and wait for it to turn green *before* clicking Run.
+    2. If the indicator is already green but output is still missing, try clicking the **Clear** button and running your code again — a stale subscription state can occasionally cause the first few messages to be silently dropped.
+    3. Open the browser developer console (F12 → Console) and look for any STOMP subscription errors. If you see `"Lost connection to ..."` immediately after connecting, the backend may have restarted; wait a moment and reconnect.
+    4. Confirm the program actually produces output. A program that compiles and runs successfully but calls no print/output statements will correctly produce an empty output panel.
+
+    <Note>
+      Output is streamed in real time as the program runs. For programs with large outputs or long runtimes, the first lines should appear within a second of starting. If you see nothing at all after 5–10 seconds, treat it as a connection issue rather than a slow program.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Project files not saving" icon="floppy-disk">
+    If changes you make in the editor are not persisted between sessions, or you receive an error when trying to save, the issue is usually on the backend storage side.
+
+    **What to check:**
+
+    1. **Watch for error toasts in the UI.** A failed save request will surface an error notification. Note the HTTP status code if one is shown — a `500` points to a server-side problem, while a `400` or `422` suggests a validation issue with the request payload.
+    2. **Check the backend server logs.** The BackRunner backend writes detailed logs to its console output. Look for exceptions involving H2, JPA, or file I/O around the time you attempted to save:
+       ```bash
+       # If running as a JAR, logs go to stdout — redirect them to a file for easier searching:
+       java -jar backrunner.jar > backrunner.log 2>&1
+       grep -i "exception\|error" backrunner.log | tail -50
+       ```
+    3. **Verify the H2 database file is writable.** BackRunner uses an embedded H2 database stored at `./data/moja_baza` relative to the working directory where the backend was started. Confirm the directory exists and the process has write permission:
+       ```bash
+       ls -la ./data/
+       ```
+    4. **Try re-saving the file.** Open the file in the editor, make a minor whitespace change, then save again. If the second save succeeds, the first failure was likely transient.
+    5. **Restart the backend** if the database file has become locked (this can happen after an ungraceful shutdown). H2 uses a lock file (`moja_baza.lock.db`) — deleting it while the server is stopped and then restarting usually resolves lock conflicts.
+
+    <Warning>
+      Do not delete the main H2 database files (`moja_baza.mv.db`) while debugging — only remove the lock file (`moja_baza.lock.db`). Deleting the main file will permanently erase all saved projects.
+    </Warning>
+  </Accordion>
+
+</AccordionGroup>

@@ -1,0 +1,68 @@
+---
+title: "Deploy View Overview — BackRunner SSH Deployment Guide"
+sidebarTitle: "Overview"
+description: "Learn how BackRunner's Deploy view lets you select projects, choose a transfer strategy, and push files to remote SSH servers in a single operation."
+---
+
+The Deploy view is BackRunner's built-in deployment interface. It connects your in-browser code projects directly to remote SSH servers without requiring any external tooling. Once you have compiled or prepared your code in the editor, you navigate to the Deploy screen and ship files to one or more remote machines in a single operation. Every deployment is driven by three choices — what to send, how to send it, and where to send it — each of which has its own panel on screen.
+
+## The three-column layout
+
+The Deploy view is divided into three panels arranged side-by-side. Each column handles one stage of the deployment pipeline.
+
+<CardGroup cols={3}>
+  <Card title="Files Panel" icon="file-code">
+    Listed on the **left**, this panel shows every compiled project and remote executable that is available to deploy. You check the items you want to transfer and, for each one, pick a transfer strategy from a per-row dropdown.
+  </Card>
+  <Card title="Center Panel" icon="arrow-right">
+    The **center** panel shows a live deployment plan — a summary of which files will land on which servers — and contains the primary **Deploy** button. After you click Deploy, the real-time log streams transfer progress here.
+  </Card>
+  <Card title="Servers Panel" icon="server">
+    Listed on the **right**, this panel shows every SSH server you have registered with BackRunner. You check the servers you want to receive the files. You can also add new servers or remove existing ones from this panel.
+  </Card>
+</CardGroup>
+
+## Step-by-step workflow
+
+<Steps>
+  <Step title="Open the Deploy view">
+    Click the **Deploy** tab in the top navigation bar. The view loads your available projects from the editor and your registered SSH servers simultaneously. A status indicator in the top-right corner turns green once both lists are ready.
+  </Step>
+  <Step title="Select files to deploy">
+    In the Files panel on the left, check the checkbox next to each project you want to transfer. Use the **All files** checkbox at the top of the list to select everything at once. Each row shows the file's language badge (`.java`, `.py`, `.cpp`, `.sh`) so you can quickly identify projects.
+  </Step>
+  <Step title="Choose a transfer strategy per file">
+    Each file row has a strategy dropdown — **Source**, **Compiled**, or **Executable**. BackRunner pre-selects a sensible default based on the language (compiled bytecode for Java, source code for Python), but you can override it for any individual file. See [Transfer Strategies](/deployment/transfer-strategies) for guidance on when to use each option.
+  </Step>
+  <Step title="Select target servers">
+    In the Servers panel on the right, check each server you want to receive the files. You can target multiple servers in a single deployment; BackRunner transfers to all of them in parallel.
+  </Step>
+  <Step title="Review the deployment plan">
+    Once you have selected at least one file and one server, the Center panel renders a **deployment plan** — a visual matrix showing which files (with their strategies) will be sent to each server. Review it before proceeding.
+  </Step>
+  <Step title="Click Deploy">
+    Press the **Deploy** button in the center panel. BackRunner sends a bulk transfer request to the backend, which opens an SSH session to each target server and copies the files. The log terminal in the center panel streams live progress as each file lands on each machine.
+  </Step>
+</Steps>
+
+## What happens after a successful deploy
+
+When all transfers complete, the Deploy button changes to **Done** and every line in the log is marked with a green check. Your files are now present on the remote machine in the directory configured for that server. You can immediately navigate to the **Instances** screen to execute the deployed program on the remote server.
+
+<Tip>
+  The status bar at the bottom of the Deploy view always shows how many servers and files are currently loaded, so you can confirm that your latest project changes are visible before you start a deployment.
+</Tip>
+
+## Navigating between screens
+
+The top navigation bar contains three tabs:
+
+| Tab | Screen |
+|-----|--------|
+| **Projects** | Returns you to the code editor and project list |
+| **Deploy** | The current SSH deployment view |
+| **Instances** | Lists running remote program instances and lets you execute commands on them |
+
+<Note>
+  Changes you make in the editor (new files, recompiled code) are reflected in the Files panel the next time you open the Deploy view. If you have the Deploy view already open, reload it to pick up new projects.
+</Note>

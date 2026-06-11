@@ -1,0 +1,88 @@
+---
+title: "Streaming Real-Time Output in the BackRunner Editor"
+sidebarTitle: "Live Output"
+description: "Connect the BackRunner terminal panel to stream live stdout and stderr over WebSocket and STOMP, with colour-coded lines and resize controls."
+---
+
+The terminal panel sits at the bottom of the editor screen and gives you a live view of your program's output the moment it starts running. It connects to the backend over WebSocket using the STOMP messaging protocol, and every line your program writes to stdout or stderr appears in the panel in real time — no polling, no page refresh. The panel is always visible in the editor layout; you control whether it is expanded or collapsed.
+
+## Connecting to the server
+
+The terminal panel does not connect automatically when you open the editor. You must click **Connect** to establish the WebSocket session.
+
+<Steps>
+  <Step title="Locate the OUTPUT panel">
+    Look for the dark panel labelled **OUTPUT** at the bottom of the editor screen, just below the code area.
+  </Step>
+  <Step title="Check the connection status indicator">
+    A small coloured dot in the top-right of the panel title bar shows the current state:
+    - 🔴 **Red** — disconnected
+    - 🟡 **Amber** — connecting in progress
+    - 🟢 **Green** — connected
+  </Step>
+  <Step title="Click Connect">
+    Click the **Connect** button next to the status indicator. BackRunner loads the SockJS and STOMP libraries, opens a WebSocket connection to:
+    ```
+    http://localhost:8888/ws-console
+    ```
+    and subscribes to the STOMP topic:
+    ```
+    /topic/output
+    ```
+    A green confirmation line — `✓ Connected to server` — appears in the output area when the handshake succeeds.
+  </Step>
+</Steps>
+
+<Note>
+  You only need to connect once per editor session. The connection persists while you compile, edit, and run; you do not need to reconnect between runs.
+</Note>
+
+## Streaming output from a running program
+
+Once the terminal is connected, click **▶ Run** in the editor toolbar. The backend launches your program and immediately begins forwarding every line of output to the STOMP topic. Each message body becomes a new line in the terminal panel.
+
+Output begins streaming as soon as the process starts — you do not wait for the program to finish before seeing results. This is especially useful for long-running programs or scripts that print progress incrementally.
+
+<Info>
+  The terminal streams both **stdout** and **stderr**. If your program writes to both channels, the lines arrive in the order the server emits them.
+</Info>
+
+## Line colours
+
+Each output line is colour-coded according to its type so you can distinguish informational messages from errors at a glance.
+
+| Colour | Type | When used |
+|--------|------|-----------|
+| Green (`#7ee787`) | `success` | Connection confirmed, program exited cleanly |
+| Red (`#ff7b72`) | `error` | Connection failed, runtime exception, stderr output |
+| Grey (`#8b949e`) | `info` | Status messages such as "Disconnected" |
+| White (`#e6edf3`) | `output` | Regular stdout lines from your program |
+
+## Collapsing and expanding the panel
+
+The terminal panel is resizable and collapsible so it does not interfere with your editing space.
+
+<CardGroup cols={2}>
+  <Card title="Collapse / expand" icon="chevron-down">
+    Click the **▼** chevron button on the left of the title bar to collapse the panel down to its title bar only. Click again (the chevron rotates 180°) to restore it to its previous height.
+  </Card>
+  <Card title="Drag to resize" icon="up-down">
+    When the panel is expanded, drag the thin resize handle at the very top edge of the panel up or down to set a custom height. The panel respects a minimum and maximum height so it never obscures the editor completely or disappears below the viewport.
+  </Card>
+</CardGroup>
+
+## Clearing the output
+
+Click the **Clear** button in the panel title bar to wipe all lines from the output area. This does not disconnect the WebSocket session — new output from subsequent runs continues to stream in after you clear.
+
+<Tip>
+  Clear the panel before each run to keep the output readable, especially when you are iterating quickly on a program that produces many lines.
+</Tip>
+
+## Disconnecting
+
+To close the WebSocket connection manually, click the **Disconnect** button that replaces the **Connect** button while you are connected. A grey `Disconnected.` line appears in the output area to confirm the session has ended. You can reconnect at any time by clicking **Connect** again.
+
+<Warning>
+  If you close or navigate away from the editor tab in your browser, the WebSocket connection is dropped silently. Open the editor again and click **Connect** to resume streaming for your next run.
+</Warning>
