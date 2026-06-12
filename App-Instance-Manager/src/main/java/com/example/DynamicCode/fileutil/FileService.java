@@ -80,10 +80,11 @@ public class FileService {
 
         for (File file : classFiles) {
             try {
+                // POBIERAMY SUROWE BAJTY PLIKU .CLASS Z DYSKU
                 byte[] fileBytes = Files.readAllBytes(file.toPath());
-                String base64Code = Base64.getEncoder().encodeToString(fileBytes);
 
-                compiledFiles.add(new CodeFileDto(file.getName(), base64Code));
+                // Przekazujemy czyste bajty bezpośrednio do DTO
+                compiledFiles.add(new CodeFileDto(file.getName(), fileBytes));
                 log.info("Pomyślnie odczytano z dysku plik binarny: {}", file.getName());
             } catch (Exception e) {
                 log.error("Błąd podczas odczytu pliku z dysku: {}", file.getName(), e);

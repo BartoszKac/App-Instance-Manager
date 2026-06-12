@@ -12,5 +12,5 @@ import lombok.Setter;
 public class CodeFileDto {
 
    private String nameFile;
-   private String Bytecode;
+   private byte[] fileContent;
 }

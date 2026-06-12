@@ -20,10 +20,11 @@ public class MapperFile {
         log.info("Mapowanie plików źródłowych na skompilowane. Liczba źródeł: {}, Liczba binariów: {}",
                 sourceFiles.size(), binaryFiles.size());
 
-        Map<String, String> binaryCodeMap = binaryFiles.stream()
+        // POPRAWKA: Zmiana typu mapy na <String, byte[]> oraz użycie poprawnych getterów z DTO
+        Map<String, byte[]> binaryCodeMap = binaryFiles.stream()
                 .collect(Collectors.toMap(
                         CodeFileDto::getNameFile,
-                        CodeFileDto::getBytecode, // Lombok z pola 'Bytecode' robi 'getBytecode()'
+                        CodeFileDto::getFileContent,
                         (existing, replacement) -> replacement
                 ));
 
@@ -32,18 +33,21 @@ public class MapperFile {
                 .collect(Collectors.toList());
     }
 
-    private CompiledCode mapToCompiledCode(SourceCode source, Map<String, String> binaryCodeMap) {
+    // POPRAWKA: Typ mapy w argumencie zmieniony na Map<String, byte[]> - teraz pasuje idealnie
+    private CompiledCode mapToCompiledCode(SourceCode source, Map<String, byte[]> binaryCodeMap) {
         String expectedBinaryName = source.getName().replace(source.getLanguage().getExtension(), ".class");
-        String bytecode = binaryCodeMap.getOrDefault(expectedBinaryName, "");
 
-        if (bytecode.isBlank()) {
+        // Pobieramy tablicę bajtów. Jeśli jej nima w mapie, zwracamy pustą tablicę
+        byte[] bytecode = binaryCodeMap.getOrDefault(expectedBinaryName, new byte[0]);
+
+        if (bytecode.length == 0) {
             log.warn("Nie znaleziono kodu binarnego dla oczekiwanego pliku: {}", expectedBinaryName);
         }
 
         CompiledCode compiled = new CompiledCode();
         compiled.setIdCode(source.getId());
         compiled.setName(expectedBinaryName);
-        compiled.setCode(bytecode);
+        compiled.setCode(bytecode); // Zapisujemy czyste bajty bezpośrednio do encji
         compiled.setIdManClass(source.getIdManClass());
         compiled.setLanguage((source.getLanguage()));
 
@@ -81,7 +85,6 @@ public class MapperFile {
 
         // Wyciągamy ID skompilowanego kodu z pierwszego elementu listy
         Long compiledCodeId = compiledCodes.get(0).getIdManClass();   // DOBRZE - to idMainClass = 888
-
 
         CompiledFolderInTheDisk compiledFolder = new CompiledFolderInTheDisk();
         compiledFolder.setName(sourceFolder.getName());

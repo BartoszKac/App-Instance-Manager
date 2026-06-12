@@ -1,0 +1,1 @@
+print("Wykonalem sie z pythona")

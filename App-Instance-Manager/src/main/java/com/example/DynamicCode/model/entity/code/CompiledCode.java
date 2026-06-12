@@ -21,8 +21,9 @@ public class CompiledCode {
 
     private String name;
 
-    @Column(columnDefinition = "TEXT")
-    private String code;
+    @Lob
+    @Column(name = "code", columnDefinition = "LONGBLOB")
+    private byte[] code;
 
     private LanguageType language;
 

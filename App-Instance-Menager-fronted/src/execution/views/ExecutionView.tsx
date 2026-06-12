@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Topbar } from '@/editor/components';
 import { useExecutionViewModel } from '@/execution/viewmodels/useExecutionViewModel';
-import { DeployedInstance } from '@/execution/model/ExecutionModel';
+import { DeployedInstance } from '@/execution/model/Executionmodel';
 import { LangBadge, StatusDot } from '@/deploy/components';
 
 interface ExecutionViewProps {

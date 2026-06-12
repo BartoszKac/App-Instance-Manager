@@ -1,0 +1,1 @@
+print("Test dla mojego proejktu")
