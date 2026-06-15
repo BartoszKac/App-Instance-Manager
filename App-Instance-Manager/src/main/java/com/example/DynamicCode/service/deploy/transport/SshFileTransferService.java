@@ -19,16 +19,13 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Set;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SshFileTransferService {
 
     private static final int CONNECTION_TIMEOUT_MS = 10000;
-    private static final String JAVA_CLASS_BASE64_PREFIX = "yv66vg==";
 
-    // Zbiór rozszerzeń ułatwiający zarządzanie czystym kodem
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(
             ".java", ".class", ".kt", ".groovy",
             ".properties", ".yml", ".yaml", ".xml", ".json",
@@ -87,10 +84,8 @@ public class SshFileTransferService {
             return;
         }
 
-        // POPRAWIONE: Bezpieczne i jednoznaczne sprawdzenie rozszerzenia
         String lowerCaseFileName = fileName.toLowerCase();
         boolean isSupported = SUPPORTED_EXTENSIONS.stream().anyMatch(lowerCaseFileName::endsWith);
-
         if (!isSupported) {
             log.warn("Wykryto plik o nieznanym rozszerzeniu: {}. Próba przesłania mimo to...", fileName);
         }
@@ -104,21 +99,24 @@ public class SshFileTransferService {
     }
 
     private byte[] resolveFileBytes(String fileName, String fileContent) {
-        String trimmedContent = fileContent.trim();
+        if (fileContent == null) {
+            return new byte[0];
+        }
+
         String lowerCaseFileName = fileName.toLowerCase();
 
-        // Sprawdzenie po rozszerzeniu binarnym LUB po nagłówku Base64
-        if (lowerCaseFileName.endsWith(".class") || lowerCaseFileName.endsWith(".jar") || trimmedContent.startsWith(JAVA_CLASS_BASE64_PREFIX)) {
+        if (lowerCaseFileName.endsWith(".class") || lowerCaseFileName.endsWith(".jar")) {
+            String textForBase64 = fileContent.trim();
             try {
-                byte[] decodedBytes = Base64.getDecoder().decode(trimmedContent);
-                log.debug("Zdekodowano plik z formatu Base64 dla: {}", fileName);
+                byte[] decodedBytes = Base64.getDecoder().decode(textForBase64);
+                log.info("Pomyślnie zdekodowano plik binarny z Base64: {}", fileName);
                 return decodedBytes;
             } catch (IllegalArgumentException e) {
-                log.error("Nie udało się zdekodować Base64 dla pliku: {}. Wysyłam jako zwykły tekst.", fileName);
+                log.warn("Plik {} nie jest w formacie Base64. Przesyłam surowe bajty ISO_8859_1.", fileName);
             }
         }
 
-        return fileContent.getBytes(StandardCharsets.UTF_8);
+        return fileContent.getBytes(StandardCharsets.ISO_8859_1);
     }
 
     private void uploadToSftp(ChannelSftp sftpChannel, String remotePath, byte[] bytes) throws SftpException {
