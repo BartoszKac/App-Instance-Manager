@@ -1,1 +1,0 @@
-print("Dzialam jestem skrytpem z windowsa")
