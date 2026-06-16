@@ -27,6 +27,6 @@ In-browser Code Editor — Full-featured Monaco Editor (the same engine as VS Co
 
 
 Public documention Api
-https://bartoszkaczmarczyk.mintlify.app/
+https://bartoszkaczmarczyk-536a3d84.mintlify.app/
 
 
