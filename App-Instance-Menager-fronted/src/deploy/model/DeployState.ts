@@ -80,9 +80,9 @@ export const UPLOAD_STRATEGIES: UploadStrategyType[] = [
 ];
 
 export const STRATEGY_LABEL: Record<UploadStrategyType, string> = {
-  SOURCE_CODE:       'Source',
-  COMPILED_CODE:     'Compiled',
-  REMOTE_EXECUTABLE: 'Executable',
+  SOURCE_CODE:       'Źródła',
+  COMPILED_CODE:     'Skompilowany',
+  REMOTE_EXECUTABLE: 'Plik wykonywalny',
 };
 
 /** Domyślna strategia na podstawie języka */
@@ -92,37 +92,9 @@ export function defaultStrategy(language: LanguageType): UploadStrategyType {
   return 'SOURCE_CODE';
 }
 
-export const LANG_COLOR: Record<string, string> = {
-  JAVA:       '#f59e0b',
-  PYTHON:     '#22c55e',
-  JAVASCRIPT: '#4f7ef7',
-  TS:         '#4f7ef7',
-  RS:         '#ef4444',
-  CSS:        '#7c3aed',
-};
-
-export const LANG_EXT: Record<string, string> = {
-  JAVA:       'java',
-  PYTHON:     'py',
-  JAVASCRIPT: 'js',
-};
-
 export const EMPTY_NEW_SERVER: NewServerForm = {
   name: '',
   host: '',
   user: 'deploy',
   pass: '',
-};
-
-export const EXT_COLOR: Record<string, string> = {
-  ts:   '#4f7ef7',
-  py:   '#22c55e',
-  js:   '#f59e0b',
-  rs:   '#ef4444',
-  css:  '#7c3aed',
-  json: '#94a3b8',
-  java: '#f59e0b',
-  JAVA:       '#f59e0b',
-  PYTHON:     '#22c55e',
-  JAVASCRIPT: '#4f7ef7',
 };

@@ -1,0 +1,12 @@
+target
+app
+data
+*.db
+deploy-config.json
+.mvn
+mvnw
+mvnw.cmd
+.idea
+.vscode
+*.md
+desktop.ini

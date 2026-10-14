@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw test:*)",
+      "Bash(./mvnw -q test:*)",
+      "Bash(./mvnw compile:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+    "deny": [
+      "Bash(./Git.bat:*)",
+      "Bash(git push:*)",
+      "Read(App-Instance-Manager/deploy-config.json)"
+    ]
+  }
+}

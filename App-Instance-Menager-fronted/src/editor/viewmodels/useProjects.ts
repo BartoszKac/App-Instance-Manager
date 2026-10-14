@@ -11,6 +11,7 @@ import {
   SourceCode,
 } from '../model/EditorState';
 import { CodeService } from '../api/CodeService';
+import { errorMessage } from '@/shared/errorMessage';
 
 // Lokalny licznik — używany tylko dla nowo tworzonych projektów (jeszcze nie zapisanych)
 let nextIdManClass = 1000;
@@ -74,8 +75,8 @@ export const useProjects = () => {
         const maxId = projects.reduce((m, p) => Math.max(m, p.id), 0);
         nextIdManClass = maxId + 1;
         setState(prev => ({ ...prev, projects }));
-      } catch (err: any) {
-        setError(err.message || 'Błąd ładowania projektów');
+      } catch (err: unknown) {
+        setError(errorMessage(err, 'Błąd ładowania projektów'));
       } finally {
         setLoading(false);
       }

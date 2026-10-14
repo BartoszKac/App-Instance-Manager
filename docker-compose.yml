@@ -1,0 +1,17 @@
+services:
+  backend:
+    build:
+      context: ./App-Instance-Manager
+    image: app-instance-manager-backend:local
+    container_name: aim-backend
+    # Bound to localhost only: the API compiles and runs arbitrary code and has no authentication.
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - aim-data:/opt/aim/data
+      - aim-projects:/opt/aim/app
+    restart: unless-stopped
+
+volumes:
+  aim-data:
+  aim-projects:

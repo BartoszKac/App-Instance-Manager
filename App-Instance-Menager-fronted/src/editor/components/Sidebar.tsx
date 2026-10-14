@@ -1,102 +1,71 @@
-// src/editor/components/Sidebar.tsx
-import React, { useState, useRef } from 'react';
-import { Project, ProjectFile, EXT_TO_LANGUAGE } from '@/editor/model';
+import { useState } from 'react';
+import type { ProjectFile } from '@/editor/model';
+import { EXT_TO_LANGUAGE } from '@/editor/model';
+import { Icon } from '@/shared/ui/Icon';
+import { langClass } from '@/shared/lang';
 
 interface SidebarProps {
-  project: Project;
+  files: ProjectFile[];
   activeFile: ProjectFile | null;
   onFileClick: (file: ProjectFile) => void;
   onFileRemove: (fileName: string) => void;
   onFileAdd: (file: ProjectFile) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  project,
-  activeFile,
-  onFileClick,
-  onFileRemove,
-  onFileAdd,
-}) => {
-  const [isAdding, setIsAdding] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+const SAFE_NAME = /^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 
-  const handleToggleAdd = () => {
-    setIsAdding(prev => !prev);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
+const toFile = (name: string): ProjectFile => {
+  const ext = name.includes('.') ? name.split('.').pop() ?? 'txt' : 'txt';
+  return { id: 0, name, ext, content: '', language: EXT_TO_LANGUAGE[ext] ?? 'UNKNOWN' };
+};
 
-  const handleConfirmAdd = () => {
-    const val = newFileName.trim();
-    if (!val) return;
-    const parts = val.split('.');
-    const ext = parts.length > 1 ? parts[parts.length - 1] : 'txt';
-    const language = EXT_TO_LANGUAGE[ext] ?? 'UNKNOWN';
-    onFileAdd({ id: 0, name: val, ext, content: '', language });
-    setNewFileName('');
-    setIsAdding(false);
-  };
+const AddFileForm = ({ existing, onAdd, onCancel }: { existing: string[]; onAdd: (f: ProjectFile) => void; onCancel: () => void }) => {
+  const [name, setName] = useState('');
+  const trimmed = name.trim();
+  const error = !trimmed ? '' : !SAFE_NAME.test(trimmed) ? 'Tylko litery, cyfry, „.”, „_” i „-”' : existing.includes(trimmed) ? 'Taki plik już jest' : '';
+  const submit = () => { if (trimmed && !error) onAdd(toFile(trimmed)); };
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <span className="sidebar-project-name">{project.name}</span>
-        <button className="icon-btn" onClick={handleToggleAdd} title="Dodaj plik">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
+    <div className="file-panel__add">
+      <input
+        className="input input--mono"
+        autoFocus
+        value={name}
+        placeholder="Nazwa pliku, np. Utils.java"
+        aria-label="Nazwa nowego pliku"
+        aria-invalid={Boolean(error)}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
+      />
+      {error && <span className="file-panel__error">{error}</span>}
+    </div>
+  );
+};
+
+export const Sidebar = ({ files, activeFile, onFileClick, onFileRemove, onFileAdd }: SidebarProps) => {
+  const [adding, setAdding] = useState(false);
+
+  return (
+    <aside className="file-panel" aria-label="Pliki projektu">
+      <div className="file-panel__head">
+        <span>Pliki</span>
+        <button className="icon-btn" onClick={() => setAdding((v) => !v)} aria-label="Dodaj plik" aria-expanded={adding}><Icon name="add" /></button>
       </div>
-
-      <div className="sidebar-section">Pliki</div>
-
-      <div className="file-list">
-        {project.files.map((file) => (
-          <div
-            key={file.name}
-            className={`file-item ${activeFile?.name === file.name ? 'active' : ''}`}
-            onClick={() => onFileClick(file)}
-          >
-            <span className={`file-icon file-ext-${file.ext}`}>.{file.ext}</span>
-            <span className="file-name">{file.name}</span>
-            {(!file.id || file.id === 0) && (
-              <span style={{ fontSize: 9, color: 'var(--accent, #4f7ef7)', marginLeft: 2 }}>●</span>
-            )}
-            <span
-              className="file-remove"
-              onClick={(e) => { e.stopPropagation(); onFileRemove(file.name); }}
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </span>
-          </div>
+      {adding && <AddFileForm existing={files.map((f) => f.name)} onAdd={(f) => { onFileAdd(f); setAdding(false); }} onCancel={() => setAdding(false)} />}
+      <ul className="file-panel__list">
+        {files.map((file) => (
+          <li key={file.name} className="file-row" aria-current={activeFile?.name === file.name ? 'true' : undefined}>
+            <button className={`file-row__open ${langClass(file.ext)}`} onClick={() => onFileClick(file)}>
+              <span className="file-row__swatch" aria-hidden="true" />
+              <span className="file-row__name">{file.name}</span>
+              {!file.id && <span className="file-row__new">nowy</span>}
+            </button>
+            <button className="icon-btn icon-btn--danger file-row__remove" onClick={() => onFileRemove(file.name)} aria-label={`Usuń ${file.name}`}>
+              <Icon name="trash" size={16} />
+            </button>
+          </li>
         ))}
-      </div>
-
-      {isAdding && (
-        <div className="add-file-form open">
-          <input
-            ref={inputRef}
-            className="add-file-input"
-            value={newFileName}
-            onChange={(e) => setNewFileName(e.target.value)}
-            placeholder="np. Main.java"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleConfirmAdd();
-              if (e.key === 'Escape') setIsAdding(false);
-            }}
-          />
-          <button className="add-file-confirm" onClick={handleConfirmAdd}>Dodaj</button>
-        </div>
-      )}
-
-      <button className="btn-add-file" onClick={handleToggleAdd}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-        Dodaj plik
-      </button>
+      </ul>
     </aside>
   );
 };

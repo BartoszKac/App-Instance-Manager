@@ -1,160 +1,81 @@
-import React from 'react';
-import { LANGUAGE_LABELS, LanguageType } from '../model/RemoteExecutable';
+import { LanguageType } from '../model/RemoteExecutable';
+import type { UploadState } from '../model/RemoteExecutable';
 import { useUploadViewModel } from '../viewmodel/useUploadViewModel';
-import './UploadView.css';
+import { ScreenHeader } from '@/shared/ui/ScreenHeader';
+import { Icon } from '@/shared/ui/Icon';
+import { Notice, Spinner } from '@/shared/ui/atoms';
 
-interface UploadViewProps {
-  onBack: () => void;
-}
+const KINDS: { value: LanguageType; label: string }[] = [
+  { value: LanguageType.JAVA, label: 'Java' },
+  { value: LanguageType.PYTHON, label: 'Python' },
+  { value: LanguageType.CPP, label: 'C++' },
+  { value: LanguageType.BASH, label: 'Bash' },
+  { value: LanguageType.UNKNOWN, label: 'Inny' },
+];
 
-export const UploadView: React.FC<UploadViewProps> = ({ onBack }) => {
+const formatSize = (bytes: number) => (bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
+
+const Result = ({ state }: { state: UploadState }) => {
+  if (state.status === 'success') return <Notice tone="ok"><Icon name="check" />{state.message ?? 'Plik przesłany. Znajdziesz go w kroku Wysyłka.'}</Notice>;
+  if (state.status === 'error') return <Notice tone="error"><Icon name="warning" />{state.message ?? 'Nie udało się przesłać pliku.'}</Notice>;
+  return null;
+};
+
+export const UploadView = () => {
   const {
-    selectedFile,
-    selectedLanguage,
-    setSelectedLanguage,
-    uploadState,
-    isDragging,
-    fileInputRef,
-    handleDrop,
-    handleDragOver,
-    handleDragLeave,
-    handleFileInputChange,
-    openFilePicker,
-    upload,
-    reset,
+    selectedFile: file, selectedLanguage, setSelectedLanguage, uploadState, isDragging, fileInputRef,
+    handleDrop, handleDragOver, handleDragLeave, handleFileInputChange, openFilePicker, upload, reset,
   } = useUploadViewModel();
-
-  const isUploading = uploadState.status === 'uploading';
-  const isSuccess   = uploadState.status === 'success';
-  const isError     = uploadState.status === 'error';
+  const uploading = uploadState.status === 'uploading';
 
   return (
-    <div className="upload-view">
-      <header className="upload-view__header">
-        <button className="upload-view__back-btn" onClick={onBack} aria-label="Wróć">
-          ←
-        </button>
-        <h1 className="upload-view__title">Prześlij plik</h1>
-      </header>
-
-      <main className="upload-view__main">
-        {/* DROP ZONE */}
+    <>
+      <ScreenHeader title="Plik" context="Prześlij gotowy program lub skrypt, żeby wysłać go na serwery bez edytora." />
+      <div className="upload" data-enter="body">
         <div
-          className={[
-            'upload-view__dropzone',
-            isDragging  ? 'upload-view__dropzone--active'   : '',
-            selectedFile ? 'upload-view__dropzone--has-file' : '',
-          ].join(' ')}
+          className="dropzone"
+          data-dragging={isDragging}
+          data-filled={Boolean(file)}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
-          onClick={selectedFile ? undefined : openFilePicker}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && openFilePicker()}
-          aria-label="Strefa przeciągania pliku"
         >
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="upload-view__file-input"
-            onChange={handleFileInputChange}
-            aria-hidden="true"
-          />
-
-          {selectedFile ? (
-            <div className="upload-view__file-info">
-              <span className="upload-view__file-icon">📄</span>
-              <div className="upload-view__file-details">
-                <p className="upload-view__file-name">{selectedFile.name}</p>
-                <p className="upload-view__file-size">
-                  {(selectedFile.size / 1024).toFixed(1)} KB
-                </p>
-              </div>
-              <button
-                className="upload-view__remove-btn"
-                onClick={(e) => { e.stopPropagation(); reset(); }}
-                aria-label="Usuń plik"
-              >
-                ✕
-              </button>
+          <input ref={fileInputRef} type="file" className="visually-hidden" tabIndex={-1} onChange={handleFileInputChange} />
+          {file ? (
+            <div className="dropzone__file">
+              <Icon name="file" size={28} />
+              <span className="dropzone__name">{file.name}</span>
+              <span className="dropzone__size">{formatSize(file.size)}</span>
+              <button className="btn btn--ghost btn--sm" onClick={() => { reset(); openFilePicker(); }} disabled={uploading}>Zmień plik</button>
             </div>
           ) : (
-            <div className="upload-view__drop-prompt">
-              <span className="upload-view__drop-icon">⬆</span>
-              <p className="upload-view__drop-text">
-                {isDragging ? 'Upuść plik tutaj' : 'Przeciągnij plik lub kliknij, aby wybrać'}
-              </p>
-              <p className="upload-view__drop-hint">Dowolny typ pliku</p>
-            </div>
+            <button className="dropzone__prompt" onClick={openFilePicker}>
+              <Icon name="upload" size={32} />
+              <span className="dropzone__title">{isDragging ? 'Upuść, żeby dodać' : 'Przeciągnij plik tutaj'}</span>
+              <span className="dropzone__hint">albo kliknij, żeby wybrać z dysku. Do 150 MB.</span>
+            </button>
           )}
         </div>
-
-        {/* LANGUAGE SELECT */}
-        <div className="upload-view__field">
-          <label className="upload-view__label" htmlFor="language-select">
-            Język / typ
-          </label>
-          <select
-            id="language-select"
-            className="upload-view__select"
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value as LanguageType)}
-            disabled={isUploading}
-          >
-            {Object.entries(LANGUAGE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+        <div className="field">
+          <span className="field__label" id="upload-kind">Rodzaj pliku</span>
+          <div className="segmented" role="group" aria-labelledby="upload-kind">
+            {KINDS.map((k) => (
+              <button key={k.value} className="segmented__item" aria-pressed={selectedLanguage === k.value} disabled={uploading} onClick={() => setSelectedLanguage(k.value)}>{k.label}</button>
             ))}
-          </select>
+          </div>
         </div>
-
-        {/* PROGRESS BAR */}
-        {isUploading && (
-          <div
-            className="upload-view__progress"
-            role="progressbar"
-            aria-valuenow={uploadState.progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className="upload-view__progress-fill"
-              style={{ width: `${uploadState.progress}%` }}
-            />
+        {uploading && (
+          <div className="progress" role="progressbar" aria-valuenow={uploadState.progress} aria-valuemin={0} aria-valuemax={100} aria-label="Postęp przesyłania">
+            <span className="progress__fill" style={{ width: `${uploadState.progress}%` }} />
           </div>
         )}
-
-        {/* STATUS */}
-        {isSuccess && (
-          <div className="upload-view__status upload-view__status--success">
-            ✓ {uploadState.message ?? 'Plik przesłany pomyślnie.'}
-          </div>
-        )}
-        {isError && (
-          <div className="upload-view__status upload-view__status--error">
-            ✕ {uploadState.message ?? 'Wystąpił błąd.'}
-          </div>
-        )}
-
-        {/* ACTIONS */}
-        <div className="upload-view__actions">
-          {isSuccess ? (
-            <button className="upload-view__btn upload-view__btn--secondary" onClick={reset}>
-              Prześlij kolejny plik
-            </button>
-          ) : (
-            <button
-              className="upload-view__btn upload-view__btn--primary"
-              onClick={upload}
-              disabled={!selectedFile || isUploading}
-            >
-              {isUploading ? 'Przesyłanie…' : 'Prześlij'}
-            </button>
-          )}
+        <Result state={uploadState} />
+        <div className="upload__actions">
+          {uploadState.status === 'success'
+            ? <button className="btn btn--quiet" onClick={reset}>Prześlij kolejny plik</button>
+            : <button className="btn btn--primary" onClick={upload} disabled={!file || uploading}>{uploading ? <Spinner /> : <Icon name="upload" />}{uploading ? 'Przesyłanie…' : 'Prześlij plik'}</button>}
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 };

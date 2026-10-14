@@ -1,65 +1,50 @@
-// src/App.tsx
-import React from 'react';
 import { useRouter } from '@/router';
+import type { Screen } from '@/router';
 import { ProjectsView, EditorView } from '@/editor/views';
-import { Project } from '@/editor/model';
 import { DeployView } from '@/deploy/views';
 import { ExecutionView } from '@/execution/views/ExecutionView';
 import { UploadView } from '@/process/views/UploadView';
 import PackageTerminal from '@/terminal/PackageTerminal';
+import { AppShell } from '@/shared/ui/AppShell';
+import type { StationId } from '@/shared/ui/PipelineRail';
 
 import '@/styles/global.css';
 
-const App: React.FC = () => {
-  const { state, navigateTo } = useRouter();
+const STATION_OF: Record<Screen, StationId> = {
+  projects: 'code',
+  editor: 'code',
+  upload: 'upload',
+  deploy: 'deploy',
+  execution: 'execution',
+};
 
-  const handleOpenProject = (project: Project) => navigateTo('editor', project);
-  const handleBack        = ()                  => navigateTo('projects');
-  const handleDeploy      = ()                  => navigateTo('deploy');
-  const handleExecution   = ()                  => navigateTo('execution');
-  const handleUpload      = ()                  => navigateTo('upload');
+const SCREEN_OF: Record<StationId, Screen> = {
+  code: 'projects',
+  upload: 'upload',
+  deploy: 'deploy',
+  execution: 'execution',
+};
+
+const App = () => {
+  const { state, navigateTo } = useRouter();
+  const toProjects = () => navigateTo('projects');
+  const screenKey = state.screen === 'editor' ? `editor-${state.currentProject?.id}` : state.screen;
 
   return (
-    <div className="app" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-
-      <div style={{ flex: 1, overflow: 'auto' }}>
-        {state.screen === 'projects' && (
-          <ProjectsView
-            onOpenProject={handleOpenProject}
-            onDeploy={handleDeploy}
-            onExecution={handleExecution}
-            onUpload={handleUpload}
-          />
-        )}
-
-        {state.screen === 'editor' && state.currentProject && (
-          <EditorView
-            project={state.currentProject}
-            onBack={handleBack}
-            onDeploy={handleDeploy}
-            onExecution={handleExecution}
-          />
-        )}
-
-        {state.screen === 'deploy' && (
-          <DeployView onBack={handleBack} onExecution={handleExecution} />
-        )}
-
-        {state.screen === 'execution' && (
-          <ExecutionView
-            onProjects={handleBack}
-            onDeploy={handleDeploy}
-          />
-        )}
-
-        {state.screen === 'upload' && (
-          <UploadView onBack={handleBack} />
-        )}
-      </div>
-
-      <PackageTerminal />
-
-    </div>
+    <AppShell
+      station={STATION_OF[state.screen]}
+      screenKey={screenKey}
+      onNavigate={(id) => navigateTo(SCREEN_OF[id])}
+      console={<PackageTerminal />}
+    >
+      {state.screen === 'projects' && <ProjectsView onOpenProject={(p) => navigateTo('editor', p)} />}
+      {state.screen === 'editor' && state.currentProject && (
+        <EditorView project={state.currentProject} onBack={toProjects} />
+      )}
+      {state.screen === 'deploy' && <DeployView />}
+      {state.screen === 'execution' && <ExecutionView />}
+      {state.screen === 'upload' && <UploadView />}
+    </AppShell>
   );
 };
 

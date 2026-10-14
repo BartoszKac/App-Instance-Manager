@@ -1,0 +1,101 @@
+:root {
+  --page: #f6f2ee;
+  --surface: #ffffff;
+  --raised: #f2ede8;
+  --raised-hover: #ebe4dd;
+  --line: #e6ded6;
+  --line-strong: #d2c7bc;
+
+  --text: #17142a;
+  --text-muted: #5f5972;
+  --text-faint: #8e879c;
+
+  --action: #17142a;
+  --action-hover: #2c2747;
+  --action-text: #ffffff;
+
+  --signal: #6236ff;
+  --signal-strong: #4c1fe8;
+  --signal-ink: #ffffff;
+  --signal-wash: rgba(98, 54, 255, 0.09);
+  --signal-edge: rgba(98, 54, 255, 0.35);
+  --glow-violet: rgba(140, 104, 255, 0.7);
+  --glow-peach: rgba(255, 176, 138, 0.65);
+
+  --ok: #13865f;
+  --ok-strong: #0e6f4e;
+  --ok-wash: rgba(19, 134, 95, 0.1);
+  --warn: #b0700f;
+  --warn-wash: rgba(176, 112, 15, 0.1);
+  --error: #d23f35;
+  --error-wash: rgba(210, 63, 53, 0.09);
+
+  --lang-java: #c2630f;
+  --lang-py: #1f6fc0;
+  --lang-cpp: #7344e6;
+  --lang-sh: #7a7410;
+  --lang-other: #8e879c;
+
+  --pane: #15121f;
+  --pane-raised: #201c2f;
+  --pane-line: #2d2842;
+  --pane-text: #ebe8f4;
+  --pane-muted: #a39cb9;
+  --pane-faint: #6d6688;
+  --pane-signal: #a68bff;
+
+  --font: 'Schibsted Grotesk', 'Segoe UI', system-ui, sans-serif;
+  --display: 'Sora', 'Schibsted Grotesk', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  --fs-xs: 11.5px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16.8px;
+  --fs-xl: 20px;
+  --fs-2xl: 29px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 2px rgba(23, 20, 42, 0.04), 0 8px 24px rgba(23, 20, 42, 0.06);
+  --shadow-float: 0 24px 64px rgba(23, 20, 42, 0.18);
+
+  --rail-width: 88px;
+  --header-height: 80px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--signal);
+}
+
+.console,
+.code,
+.run-output,
+.deploy-log__lines,
+.prompt,
+.statusbar {
+  --text: var(--pane-text);
+  --text-muted: var(--pane-muted);
+  --text-faint: var(--pane-faint);
+  --line: var(--pane-line);
+  --line-strong: #3d3757;
+  --raised: var(--pane-raised);
+  --raised-hover: #2a2540;
+  --signal: var(--pane-signal);
+  --signal-wash: rgba(166, 139, 255, 0.14);
+  --ok: #5fd3a1;
+  --error: #ff8077;
+  --warn: #f0b85a;
+  --focus-ring: 0 0 0 2px var(--pane), 0 0 0 4px var(--pane-signal);
+  background: var(--pane);
+  color: var(--text);
+}

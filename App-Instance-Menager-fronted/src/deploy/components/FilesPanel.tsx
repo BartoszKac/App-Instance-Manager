@@ -1,141 +1,59 @@
-// src/deploy/components/FilesPanel.tsx
-import React from 'react';
-import { LANG_COLOR, LANG_EXT, UPLOAD_STRATEGIES, STRATEGY_LABEL } from '../model/DeployState';
-import { DeployViewModel } from '../viewmodel/useDeployViewModel';
-import { Checkbox } from './DeployAtoms';
+import { UPLOAD_STRATEGIES, STRATEGY_LABEL } from '../model/DeployState';
+import type { DeployFile, UploadStrategyType } from '../model/DeployState';
+import type { DeployViewModel } from '../viewmodel/useDeployViewModel';
+import { Checkbox, Notice, Spinner } from '@/shared/ui/atoms';
+import { langClass } from '@/shared/lang';
 
-interface FilesPanelProps {
-  vm: DeployViewModel;
+interface FileRowProps {
+  file: DeployFile;
+  checked: boolean;
+  onToggle: () => void;
+  onStrategy: (s: UploadStrategyType) => void;
 }
 
-const STRATEGY_COLOR = {
-  SOURCE_CODE:       '#4f7ef7',
-  COMPILED_CODE:     '#f59e0b',
-  REMOTE_EXECUTABLE: '#22c55e',
-} as const;
+const FileRow = ({ file, checked, onToggle, onStrategy }: FileRowProps) => (
+  <li className="pick-row" data-checked={checked}>
+    <label className={`pick-row__label ${langClass(file.language)}`}>
+      <Checkbox checked={checked} onChange={onToggle} label={`Wybierz ${file.name}`} />
+      <span className="pick-row__swatch" aria-hidden="true" />
+      <span className="pick-row__name">{file.name}</span>
+    </label>
+    <select className="pick-row__select" value={file.strategy} aria-label={`Co wysłać z ${file.name}`} onChange={(e) => onStrategy(e.target.value as UploadStrategyType)}>
+      {UPLOAD_STRATEGIES.map((s) => <option key={s} value={s}>{STRATEGY_LABEL[s]}</option>)}
+    </select>
+  </li>
+);
 
-export const FilesPanel: React.FC<FilesPanelProps> = ({ vm }) => {
-  const {
-    files,
-    selectedFiles,
-    toggleFile,
-    toggleAllFiles,
-    setFileStrategy,
-    loading,
-    loadError,
-  } = vm;
+const Group = ({ title, files, vm }: { title: string; files: DeployFile[]; vm: DeployViewModel }) =>
+  files.length === 0 ? null : (
+    <section className="pick-group">
+      <h3 className="pick-group__title">{title}</h3>
+      <ul className="pick-group__list">
+        {files.map((f) => (
+          <FileRow key={f.key} file={f} checked={vm.selectedFiles.has(f.key)} onToggle={() => vm.toggleFile(f.key)} onStrategy={(s) => vm.setFileStrategy(f.key, s)} />
+        ))}
+      </ul>
+    </section>
+  );
 
-  const allChecked  = files.length > 0 && selectedFiles.size === files.length;
-  const someChecked = selectedFiles.size > 0 && !allChecked;
-
-  const sourceFiles  = files.filter((f) => f.source === 'source');
-  const processFiles = files.filter((f) => f.source === 'process');
-
-  const renderFileRow = (file: ReturnType<typeof files[0]['source'] extends 'source' ? never : never> extends never ? typeof files[0] : typeof files[0]) => {
-    const checked = selectedFiles.has(file.key);
-    const color   = LANG_COLOR[file.language] ?? '#94a3b8';
-    const ext     = LANG_EXT[file.language]   ?? file.language.toLowerCase();
-    const stratColor = STRATEGY_COLOR[file.strategy] ?? '#94a3b8';
-
-    return (
-      <div
-        key={file.key}
-        className={`file-item file-item-deploy ${checked ? 'active' : ''}`}
-        style={{ background: checked ? `${color}15` : 'transparent' }}
-      >
-        {/* checkbox — tylko ta kolumna zaznacza plik */}
-        <div onClick={() => toggleFile(file.key)} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, cursor: 'pointer' }}>
-          <Checkbox checked={checked} onChange={() => toggleFile(file.key)} />
-          <span style={{
-            fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
-            color, background: color + '20',
-            padding: '1px 5px', borderRadius: 3, flexShrink: 0,
-          }}>
-            .{ext}
-          </span>
-          <span className="file-name">{file.name}</span>
-        </div>
-
-        {/* strategia — dropdown per plik */}
-        <select
-          value={file.strategy}
-          onChange={(e) => setFileStrategy(file.key, e.target.value as typeof file.strategy)}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            fontSize: 9, fontFamily: 'var(--mono)',
-            color: stratColor,
-            background: stratColor + '15',
-            border: `1px solid ${stratColor}40`,
-            borderRadius: 3, padding: '1px 4px',
-            cursor: 'pointer', outline: 'none',
-            flexShrink: 0,
-          }}
-        >
-          {UPLOAD_STRATEGIES.map((s) => (
-            <option key={s} value={s}>{STRATEGY_LABEL[s]}</option>
-          ))}
-        </select>
-      </div>
-    );
-  };
-
+export const FilesPanel = ({ vm }: { vm: DeployViewModel }) => {
+  const all = vm.files.length > 0 && vm.selectedFiles.size === vm.files.length;
   return (
-    <aside className="sidebar sidebar-deploy">
-      <div className="sidebar-header">
-        <span className="sidebar-project-name">Pliki źródłowe</span>
-        <span className="sidebar-badge">{selectedFiles.size} wybrano</span>
+    <aside className="deploy-panel" aria-label="Pliki do wysłania">
+      <div className="deploy-panel__head">
+        <label className="deploy-panel__all">
+          <Checkbox checked={all} indeterminate={vm.selectedFiles.size > 0} onChange={vm.toggleAllFiles} label="Zaznacz wszystkie pliki" />
+          Pliki
+        </label>
+        <span className="deploy-panel__count">{vm.selectedFiles.size} z {vm.files.length}</span>
       </div>
-
-      {loading && (
-        <div style={{ padding: 16, color: 'var(--text3)', fontSize: 12 }}>
-          <span className="deploy-spinner" style={{ marginRight: 8 }} />
-          Ładowanie plików…
-        </div>
-      )}
-
-      {loadError && (
-        <div style={{ padding: 12, color: '#ef4444', fontSize: 11, fontFamily: 'var(--mono)' }}>
-          ✗ {loadError}
-        </div>
-      )}
-
-      {!loading && !loadError && (
-        <div className="file-list" style={{ flex: 1, overflowY: 'auto' }}>
-          {/* zaznacz wszystkie */}
-          <div
-            className="file-item project-group"
-            style={{ background: 'var(--bg3)', borderLeft: '4px solid var(--accent)' }}
-          >
-            <Checkbox checked={allChecked} indeterminate={someChecked} onChange={toggleAllFiles} />
-            <div
-              onClick={toggleAllFiles}
-              style={{ fontSize: 11, color: 'var(--text2)', cursor: 'pointer', fontWeight: 600 }}
-            >
-              Wszystkie pliki
-            </div>
-          </div>
-
-          {sourceFiles.length > 0 && (
-            <>
-              <div className="sidebar-section">Klasy główne</div>
-              {sourceFiles.map(renderFileRow)}
-            </>
-          )}
-
-          {processFiles.length > 0 && (
-            <>
-              <div className="sidebar-section">Procesy</div>
-              {processFiles.map(renderFileRow)}
-            </>
-          )}
-
-          {files.length === 0 && (
-            <div style={{ padding: 16, color: 'var(--text3)', fontSize: 12, textAlign: 'center' }}>
-              Brak dostępnych plików
-            </div>
-          )}
-        </div>
-      )}
+      <div className="deploy-panel__body">
+        {vm.loading && <p className="deploy-panel__loading"><Spinner />Wczytywanie plików…</p>}
+        {vm.loadError && <Notice tone="error">{vm.loadError}</Notice>}
+        {!vm.loading && !vm.loadError && vm.files.length === 0 && <p className="deploy-panel__empty">Brak plików. Zapisz projekt albo prześlij plik.</p>}
+        <Group title="Projekty" files={vm.files.filter((f) => f.source === 'source')} vm={vm} />
+        <Group title="Przesłane pliki" files={vm.files.filter((f) => f.source === 'process')} vm={vm} />
+      </div>
     </aside>
   );
 };

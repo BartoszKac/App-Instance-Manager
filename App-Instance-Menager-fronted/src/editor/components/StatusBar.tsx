@@ -1,38 +1,22 @@
-// src/editor/components/StatusBar.tsx
-import React from 'react';
-import { ProjectFile } from '@/editor/model';
-
-const LANG_LABELS: Record<string, string> = {
-  ts: 'TypeScript',
-  py: 'Python',
-  js: 'JavaScript',
-  rs: 'Rust',
-  css: 'CSS',
-  json: 'JSON',
-  txt: 'Text',
-};
+import type { ProjectFile } from '@/editor/model';
+import { LANG_LABEL, toLangKey } from '@/shared/lang';
 
 interface StatusBarProps {
   file: ProjectFile | null;
-  lineCount: number;
+  dirty: boolean;
 }
 
-export const StatusBar: React.FC<StatusBarProps> = ({ file, lineCount }) => {
-  const lang = file ? (LANG_LABELS[file.ext] ?? file.ext) : '—';
-  const lines =
-    lineCount === 1 ? '1 linia' : lineCount < 5 ? `${lineCount} linie` : `${lineCount} linii`;
+const linesLabel = (n: number) => (n === 1 ? '1 linia' : n % 10 >= 2 && n % 10 <= 4 && (n < 10 || n > 20) ? `${n} linie` : `${n} linii`);
 
+export const StatusBar = ({ file, dirty }: StatusBarProps) => {
+  const lines = file ? (file.content || '').split('\n').length : 0;
   return (
-    <div className="statusbar">
-      <div className="status-item">
-        <div className="status-dot" />
-        <span>Gotowy</span>
-      </div>
-      <span>{lang}</span>
-      <div className="status-spacer" />
-      <span>{file ? lines : '—'}</span>
-      <span>·</span>
+    <footer className="statusbar">
+      <span>{file ? LANG_LABEL[toLangKey(file.ext)] : 'Brak pliku'}</span>
+      {file && <span>{linesLabel(lines)}</span>}
+      <span className="statusbar__spacer" />
+      {dirty && <span className="statusbar__dirty">Niezapisane</span>}
       <span>UTF-8</span>
-    </div>
+    </footer>
   );
 };

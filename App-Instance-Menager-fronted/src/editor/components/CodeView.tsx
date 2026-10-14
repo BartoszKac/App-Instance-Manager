@@ -1,80 +1,67 @@
-// src/editor/components/CodeView.tsx
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import Editor from 'react-simple-code-editor';
 import Prism from 'prismjs';
-
 import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-java';
 import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-rust';
-import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-json';
+import type { ProjectFile } from '@/editor/model';
+import { EmptyState } from '@/shared/ui/atoms';
+import { Icon } from '@/shared/ui/Icon';
 
-import 'prismjs/themes/prism-tomorrow.css';
-import { ProjectFile, SAMPLE_CODE } from '@/editor/model';
+const EditorModule = Editor as unknown as { default?: typeof Editor };
+const EditorComponent = EditorModule.default ?? Editor;
 
-// Vite/ESM compatibility fix for react-simple-code-editor
-const EditorModule = Editor as unknown as { default: React.ComponentType };
-const EditorComponent = EditorModule.default || Editor;
+const GRAMMAR_OF: Record<string, string> = {
+  java: 'java',
+  py: 'python',
+  cpp: 'cpp',
+  cc: 'cpp',
+  c: 'c',
+  h: 'cpp',
+  sh: 'bash',
+  json: 'json',
+};
 
 interface CodeViewProps {
   file: ProjectFile | null;
-  onContentChange?: (content: string) => void;
+  onContentChange: (content: string) => void;
+  onClear: () => void;
 }
 
-export const CodeView: React.FC<CodeViewProps> = ({ file, onContentChange }) => {
-  const prismLanguage = useMemo(() => {
-    if (!file) return Prism.languages.clike;
-    const langMap: Record<string, Prism.Grammar> = {
-      ts:   Prism.languages.typescript,
-      js:   Prism.languages.javascript,
-      py:   Prism.languages.python,
-      rs:   Prism.languages.rust,
-      css:  Prism.languages.css,
-      json: Prism.languages.json,
-    };
-    return langMap[file.ext] || Prism.languages.clike;
-  }, [file]);
-
-  const displayCode = useMemo(() => {
-    if (!file) return '';
-    const content = file.content ?? '';    return content;
-  }, [file]);
-
-  const lineCount = displayCode.split('\n').length;
-  const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1).join('\n');
+export const CodeView = ({ file, onContentChange, onClear }: CodeViewProps) => {
+  const grammarName = file ? GRAMMAR_OF[file.ext] ?? 'clike' : 'clike';
+  const grammar = Prism.languages[grammarName] ?? Prism.languages.clike;
+  const code = file?.content ?? '';
+  const gutter = useMemo(() => Array.from({ length: code.split('\n').length }, (_, i) => i + 1).join('\n'), [code]);
 
   if (!file) {
-    return (
-      <div className="code-area">
-        <div style={{ padding: 32, color: 'var(--text3)', fontSize: 13 }}>
-          Wybierz plik z listy po lewej stronie.
-        </div>
-      </div>
-    );
+    return <div className="code"><EmptyState title="Żaden plik nie jest otwarty" hint="Wybierz plik z listy po lewej albo dodaj nowy." /></div>;
   }
 
   return (
-    <div className="code-area">
-      <div className="line-nums">{lineNumbers}</div>
-      <div className="code-editor-container" style={{ flex: 1, position: 'relative' }}>
+    <div className="code">
+      <div className="code__scroll">
+        <pre className="code__gutter" aria-hidden="true">{gutter}</pre>
         <EditorComponent
-          className="code-content code-editor-root"
-          value={displayCode}
-          onValueChange={(content: string) => {
-            onContentChange?.(content);
-          }}
-          highlight={(code: string) => Prism.highlight(code, prismLanguage, file.ext)}
-          padding={10}
-          style={{
-            fontFamily: 'var(--mono)',
-            fontSize: 14,
-            minHeight: '100%',
-            outline: 'none',
-          }}
+          className="code__editor"
+          textareaClassName="code__textarea"
+          textareaId="code-editor"
+          aria-label={`Treść pliku ${file.name}`}
+          value={code}
+          onValueChange={onContentChange}
+          highlight={(value: string) => Prism.highlight(value, grammar, grammarName)}
+          padding={{ top: 16, bottom: 48, left: 16, right: 24 }}
+          tabSize={4}
+          insertSpaces
         />
       </div>
+      <button className="btn btn--ghost btn--sm code__clear" onClick={onClear} disabled={!code}>
+        <Icon name="erase" size={15} />Wyczyść plik
+      </button>
     </div>
   );
 };
