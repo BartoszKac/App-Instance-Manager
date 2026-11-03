@@ -13,7 +13,7 @@ in the main application.
 - [x] Inspector writes over SFTP to a temporary name, checks the size, then renames.
 - [x] Backend feature `transfer`: raw request body streamed to gRPC, no multipart and no temporary file.
 - [x] Only metadata stored: paths, size, SHA-256, state, error, times.
-- [x] Admin tab "Wyślij": files or a folder, target folder, overwrite option, progress, history.
+- [x] Screen "Plik", mode "Prosto na serwer": server choice, files or a folder, target folder picker, overwrite option, progress, history.
 
 ## 🚫 Out of scope
 Empty folders (browsers do not report them), download, resuming an interrupted file, file permissions.

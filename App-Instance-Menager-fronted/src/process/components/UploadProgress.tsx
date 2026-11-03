@@ -1,8 +1,8 @@
 import type { Tone } from '@/shared/ui/atoms';
 import { StatusDot } from '@/shared/ui/atoms';
 import type { UploadItem, UploadItemStatus } from '../model/DirectUpload';
-import type { DirectUploadViewModel } from '../viewmodels/useDirectUpload';
-import { formatBytes } from './format';
+import type { DirectUploadViewModel } from '../viewmodel/useDirectUpload';
+import { formatBytes } from '@/shared/format';
 
 const MAX_VISIBLE = 100;
 

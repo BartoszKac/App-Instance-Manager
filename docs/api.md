@@ -172,7 +172,8 @@ mapping. `test/CodeController` shares the `/api/code` prefix — check before ad
 | `deploy/api/serversApi.ts` | `/api/deploy/server/bulk`, `/api/deploy/server-inventory/{id}` |
 | `services/api/servicesApi.ts` | `/api/services`, `/api/services/{id}` |
 | `admin/api/inspectionApi.ts` | `/api/inspections/servers`, `/servers/{id}`, `/servers/{id}/files`, `/servers/{id}/files/search`, `/servers/{id}/host-key`, `/api/deploy/server-credentials/{id}` |
-| `admin/api/transferApi.ts` | `/api/transfers/servers/{id}/files` |
+| `process/api/transferApi.ts` | `/api/transfers/servers/{id}/files` |
+| `shared/inspection/inspectionFilesApi.ts` | `/api/inspections/servers`, `/servers/{id}/files` (also the folder picker of screen Plik) |
 | `execution/viewmodels/useExecutionViewModel.ts` | `/api/deploy/programs`, `/servers`, `/program/execute` |
 | `process/model/remoteExecutableRepository.ts` | `/api/process/**` |
 | `terminal/PackageTerminal.tsx` | `/ws-console`, `/topic/output` |

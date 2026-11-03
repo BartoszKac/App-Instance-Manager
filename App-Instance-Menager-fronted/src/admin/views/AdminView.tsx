@@ -6,8 +6,7 @@ import { FileSearchResults } from '../components/FileSearchResults';
 import { FileTree } from '../components/FileTree';
 import { InspectionSummary } from '../components/InspectionSummary';
 import { ServerStatusList } from '../components/ServerStatusList';
-import { DirectUploadView } from './DirectUploadView';
-import { FILES_TAB, UPLOAD_TAB, useAdminViewModel } from '../viewmodels/useAdminViewModel';
+import { FILES_TAB, useAdminViewModel } from '../viewmodels/useAdminViewModel';
 import type { AdminViewModel } from '../viewmodels/useAdminViewModel';
 
 const Tabs = ({ vm }: { vm: AdminViewModel }) => (
@@ -52,8 +51,7 @@ const Results = ({ vm }: { vm: AdminViewModel }) => {
         onEditCredentials={vm.credentials.open}
       />
       <Tabs vm={vm} />
-      <div hidden={vm.activeTab !== UPLOAD_TAB}><DirectUploadView key={server.serverId} serverId={server.serverId} /></div>
-      {vm.activeTab !== UPLOAD_TAB && <DataPanel vm={vm} hasData={server.dataFrom !== null} />}
+      <DataPanel vm={vm} hasData={server.dataFrom !== null} />
     </div>
   );
 };

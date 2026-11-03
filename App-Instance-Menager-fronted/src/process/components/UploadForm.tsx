@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Icon } from '@/shared/ui/Icon';
 import { Spinner } from '@/shared/ui/atoms';
-import type { DirectUploadViewModel } from '../viewmodels/useDirectUpload';
+import type { DirectUploadViewModel } from '../viewmodel/useDirectUpload';
 
 const Pickers = ({ vm }: { vm: DirectUploadViewModel }) => {
   const filesRef = useRef<HTMLInputElement>(null);
@@ -29,18 +29,30 @@ const Actions = ({ vm }: { vm: DirectUploadViewModel }) => (
   </div>
 );
 
-export const UploadForm = ({ vm }: { vm: DirectUploadViewModel }) => (
+const Destination = ({ vm, hasFolderList }: { vm: DirectUploadViewModel; hasFolderList: boolean }) => (
+  <div className="field">
+    <label className="field__label" htmlFor="direct-upload-destination">Folder docelowy na serwerze</label>
+    <div className="direct-upload-form__destination">
+      <input id="direct-upload-destination" className="input input--mono" placeholder="/opt/app" value={vm.destination} disabled={vm.isSending} onChange={(e) => vm.setDestination(e.target.value)} />
+      <button type="button" className="btn btn--quiet" disabled={vm.isSending || !hasFolderList} onClick={() => void vm.folders.open()}>
+        <Icon name="folder" size={16} />Wybierz folder
+      </button>
+    </div>
+    <p className="direct-upload-form__hint">
+      {hasFolderList ? 'Możesz dopisać nowy podfolder do ścieżki. Brakujące foldery powstaną same.' : 'Ten serwer nie ma wyników badania, więc wpisz pełną ścieżkę ręcznie.'}
+    </p>
+  </div>
+);
+
+export const UploadForm = ({ vm, hasFolderList }: { vm: DirectUploadViewModel; hasFolderList: boolean }) => (
   <div className="direct-upload-form">
-    <label className="field">
-      <span className="field__label">Katalog docelowy na serwerze</span>
-      <input className="input input--mono" placeholder="/opt/app" value={vm.destination} disabled={vm.isSending} onChange={(e) => vm.setDestination(e.target.value)} />
-    </label>
+    <Destination vm={vm} hasFolderList={hasFolderList} />
     <label className="direct-upload-form__check">
       <input type="checkbox" className="checkbox" checked={vm.overwrite} disabled={vm.isSending} onChange={(e) => vm.setOverwrite(e.target.checked)} />
       Nadpisuj istniejące pliki
     </label>
     <Pickers vm={vm} />
     <Actions vm={vm} />
-    <p className="direct-upload-form__hint">Pliki idą prosto na serwer, bez zapisu w aplikacji. Nie zamykaj tej karty ani nie zmieniaj serwera, dopóki wysyłka trwa.</p>
+    <p className="direct-upload-form__hint">Pliki idą prosto na serwer, bez zapisu w aplikacji. Nie zamykaj tej karty, nie zmieniaj serwera ani ekranu, dopóki wysyłka trwa.</p>
   </div>
 );

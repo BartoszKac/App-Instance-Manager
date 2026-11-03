@@ -1,5 +1,5 @@
 import type { InspectedFile } from '../model/Inspection';
-import { formatBytes, formatEpoch } from './format';
+import { formatBytes, formatEpoch } from '@/shared/format';
 
 export const FileMeta = ({ file }: { file: InspectedFile }) => (
   <>

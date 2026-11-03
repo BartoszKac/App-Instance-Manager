@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { errorMessage } from '@/shared/errorMessage';
 import { fetchUploadHistory } from '../api/transferApi';
 import type { DirectUploadPage, UploadItem } from '../model/DirectUpload';
+import { useRemoteFolders } from './useRemoteFolders';
 import { startUploadQueue } from './uploadQueue';
 import type { UploadQueueHandle } from './uploadQueue';
 
@@ -21,6 +22,7 @@ export const useDirectUpload = (serverId: number) => {
   const [history, setHistory] = useState<DirectUploadPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const queue = useRef<UploadQueueHandle | null>(null);
+  const folders = useRemoteFolders(serverId, setDestination);
 
   const reloadHistory = useCallback(async () => {
     try {
@@ -67,7 +69,7 @@ export const useDirectUpload = (serverId: number) => {
 
   const canSend = !isSending && items.length > 0 && destination.trim().startsWith('/');
 
-  return { destination, setDestination, overwrite, setOverwrite, items, summary, isSending, canSend, history, error, choose, send, stop };
+  return { folders, destination, setDestination, overwrite, setOverwrite, items, summary, isSending, canSend, history, error, choose, send, stop };
 };
 
 export type DirectUploadViewModel = ReturnType<typeof useDirectUpload>;

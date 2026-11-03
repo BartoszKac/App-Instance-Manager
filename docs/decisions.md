@@ -287,6 +287,7 @@ nothing saved on the backend except the most important information about each fi
 - `server.tomcat.max-swallow-size=-1`, so the browser receives the error instead of a broken connection when the upload is
   refused early. A refused large file is still read and discarded first.
 - Host keys are shared with inspections and pinned on first use.
+- The UI lives on screen Plik, next to the older upload to the app. The target folder picker reads the listing of the last inspection, so it can miss newer folders and is unavailable before a first inspection. A path can always be typed by hand.
 
 **Consequences.** An upload holds one Tomcat thread, so requests beyond the limit get `503` and other endpoints stay
 free. This path is not asynchronous inside the backend, unlike inspections. One SSH login per file makes folders of many small

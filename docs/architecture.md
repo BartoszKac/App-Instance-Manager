@@ -81,7 +81,7 @@ logs in over SSH and streams facts and file batches → `InspectionStreamObserve
 `admin/` screen polls `/api/inspections/**`. Replicas scale on `GET /api/inspections/load` through KEDA and an HPA (`k8s/`).
 
 **Direct upload** (ADR-015)
-Admin tab "Wyślij" → one `POST /api/transfers/servers/{id}/files` per file with a raw body → `DirectUploadService` streams it over
+Screen "Plik" → one `POST /api/transfers/servers/{id}/files` per file with a raw body → `DirectUploadService` streams it over
 gRPC → inspector writes over SFTP. The backend stores only `DirectUploadRecord` metadata.
 
 ## 5. Frontend structure

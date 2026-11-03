@@ -1,7 +1,8 @@
 import { Icon } from '@/shared/ui/Icon';
 import { Notice, Spinner } from '@/shared/ui/atoms';
 import type { InspectionStatus } from '../model/Inspection';
-import { STAGE_LABEL, formatIso } from './format';
+import { formatIso } from '@/shared/format';
+import { STAGE_LABEL } from './format';
 
 interface InspectionSummaryProps {
   server: InspectionStatus;

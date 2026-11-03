@@ -1,7 +1,7 @@
 import { StatusDot } from '@/shared/ui/atoms';
 import type { DirectUploadPage, DirectUploadRecord, DirectUploadState } from '../model/DirectUpload';
 import type { Tone } from '@/shared/ui/atoms';
-import { formatBytes, formatIso } from './format';
+import { formatBytes, formatIso } from '@/shared/format';
 
 const TONE: Record<DirectUploadState, Tone> = { IN_PROGRESS: 'warn', DONE: 'ok', FAILED: 'error' };
 

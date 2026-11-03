@@ -63,7 +63,7 @@ src/
   editor/            projects list + code editor        (api/, components/, model/, viewmodels/, views/)
   deploy/            servers, files, transfer           (components/, model/, viewmodel/, views/)
   execution/         run programs on remote servers     (model/, viewmodels/, views/)
-  process/           upload remote executables          (model/, viewmodel/, views/)
+  process/           upload remote executables, direct upload to a server   (api/, components/, model/, viewmodel/, views/)
   services/          services found on the LAN and the user's own list   (api/, components/, model/, viewmodels/, views/)
   admin/             inspection results of servers: status, folder tree, search, facts   (api/, components/, model/, viewmodels/, views/)
   terminal/          live console over STOMP (types for window.SockJS / window.Stomp in vite-env.d.ts)
