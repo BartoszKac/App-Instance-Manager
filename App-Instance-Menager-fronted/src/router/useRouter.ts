@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Project } from '../editor/model/EditorState';
 
-export type Screen = 'projects' | 'editor' | 'deploy' | 'execution' | 'upload' | 'services';
+export type Screen = 'projects' | 'editor' | 'deploy' | 'execution' | 'upload' | 'services' | 'admin';
 
 interface RouterState {
   screen: Screen;

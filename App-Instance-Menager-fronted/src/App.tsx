@@ -5,6 +5,7 @@ import { DeployView } from '@/deploy/views';
 import { ExecutionView } from '@/execution/views/ExecutionView';
 import { UploadView } from '@/process/views/UploadView';
 import { ServicesView } from '@/services/views/ServicesView';
+import { AdminView } from '@/admin/views/AdminView';
 import PackageTerminal from '@/terminal/PackageTerminal';
 import { AppShell } from '@/shared/ui/AppShell';
 import type { StationId } from '@/shared/ui/PipelineRail';
@@ -18,6 +19,7 @@ const STATION_OF: Record<Screen, StationId> = {
   deploy: 'deploy',
   execution: 'execution',
   services: 'services',
+  admin: 'admin',
 };
 
 const SCREEN_OF: Record<StationId, Screen> = {
@@ -26,6 +28,7 @@ const SCREEN_OF: Record<StationId, Screen> = {
   deploy: 'deploy',
   execution: 'execution',
   services: 'services',
+  admin: 'admin',
 };
 
 const App = () => {
@@ -48,6 +51,7 @@ const App = () => {
       {state.screen === 'execution' && <ExecutionView />}
       {state.screen === 'upload' && <UploadView />}
       {state.screen === 'services' && <ServicesView />}
+      {state.screen === 'admin' && <AdminView />}
     </AppShell>
   );
 };

@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aim-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aim-projects
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: backend
+          image: app-instance-manager-backend:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8888
+          env:
+            - name: AIM_INSPECTOR_TARGET
+              value: dns:///inspector-grpc:9090
+            - name: AIM_NETWORK_SCAN_SUBNETS
+              value: 192.168.1.0/24
+          readinessProbe:
+            httpGet:
+              path: /v3/api-docs
+              port: 8888
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /opt/aim/data
+            - name: projects
+              mountPath: /opt/aim/app
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: aim-data
+        - name: projects
+          persistentVolumeClaim:
+            claimName: aim-projects
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+    - port: 8888
+      targetPort: 8888

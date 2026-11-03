@@ -65,6 +65,7 @@ src/
   execution/         run programs on remote servers     (model/, viewmodels/, views/)
   process/           upload remote executables          (model/, viewmodel/, views/)
   services/          services found on the LAN and the user's own list   (api/, components/, model/, viewmodels/, views/)
+  admin/             inspection results of servers: status, folder tree, search, facts   (api/, components/, model/, viewmodels/, views/)
   terminal/          live console over STOMP (types for window.SockJS / window.Stomp in vite-env.d.ts)
   shared/            cross-feature code: errorMessage, http.ts + apiBase.ts, lang.ts (language keys/labels), motion.ts (GSAP),
                      network/ (LAN scan API, types, useLanScan), ui/ (AppShell, PipelineRail, ScreenHeader, Modal, Icon, atoms)

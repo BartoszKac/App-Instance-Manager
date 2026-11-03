@@ -60,6 +60,7 @@ com.example.DynamicCode
   deploy/     remote servers, SSH sessions, file transfer, remote programs, remote execution
   process/    uploaded executables (RemoteExecutable)
   catalog/    services kept by the user (ManagedService)
+  inspection/ queue, gRPC client and stored results of server inspections (ADR-014)
   shared/     WebSocket config, FrontendNotificationService, GlobalExceptionHandler,
               CORS config, generic file helpers
   legacy/     former controller/test + service/**/test, @Profile("dev") — frozen, see section 3
@@ -96,6 +97,7 @@ their feature's `service/`; their generic interface `DataBaseProvider<T>` is in
 | `legacy` | anything (frozen) |
 | `code` | nothing from other features |
 | `catalog` | nothing from other features |
+| `inspection` | `deploy.service.RemoteSerwerService`, `deploy.entity.RemoteSerwerConfiguration`, `deploy.enums.OperationSystem` (ADR-014). `deploy` reaches `inspection` only through events in `shared.event` |
 
 Any new cross-feature import not in this table needs a decision in `docs/decisions.md`. Nothing
 outside `legacy` may import from `legacy`.

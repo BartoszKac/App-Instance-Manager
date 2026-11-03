@@ -235,3 +235,36 @@ list missed. Reverse DNS through the router returned real names; the container's
 **Consequences.** Opening a preview sends the stored password to the server over SSH with
 `StrictHostKeyChecking=no`, the known weakness in the security table. Network data for a server outside the
 allowed subnets is not available (`400`). The percentage moves by stage, so a slow device can hold it still.
+
+## ADR-014 – Server inspection in a scalable gRPC microservice (03.11.2026)
+
+**Context.** The user wants every server with a known password to be logged in to and examined as fully as possible,
+with results easy to browse in an admin panel. The work must be asynchronous in the main app and done by a new Java
+microservice that grows under load and talks gRPC. Chosen by the user: Kubernetes with an HPA, whole-disk metadata
+without `sudo` or file contents, a new admin screen, an isolated network without TLS for gRPC.
+
+**Decision.**
+- New module `App-Instance-Inspector`, stateless, with no DB. `proto/inspection.proto` is the shared contract, which is
+  why both Docker builds now use the repository root as context. It uses the `com.github.mwiede:jsch` fork, because
+  JSch 0.1.55 lacks current key algorithms. The backend keeps 0.1.55 (ADR-002).
+- Backend feature `inspection`. A start only saves a queued run and answers `202`. Calls use the gRPC async stub with
+  manual flow control, and each message is saved on a small executor before the next is requested. The inspector
+  stores nothing; only the backend writes to H2. Old data stays until a new run succeeds.
+- Runs start when `deploy` publishes `ServerCredentialsSavedEvent`, and can be restarted by hand. Passwords are read at
+  dispatch and never queued. A full or lost instance puts the run back in the queue, up to `aim.inspection.max-retries`.
+- Scaling is an HPA created by **KEDA**, driven by active plus queued runs (`GET /api/inspections/load`) divided by 4,
+  1–10 replicas. KEDA was added to the user's choice of HPA, because inspections wait on SSH and use little CPU, so a
+  plain CPU HPA would not react. Clients find replicas through a headless service, `round_robin` and a 2 minute
+  connection age limit.
+- The whole app gets manifests in `k8s/`, because a backend outside the cluster would need gRPC published on the host.
+  Compose stays, with manual `--scale`.
+- Host keys are trusted on first use and pinned per server and IP. A change fails the run until the user accepts it.
+- Facts leave out process arguments and full cron commands, because they often hold secrets.
+- Limits: 500 000 entries per server, 4 concurrent jobs per instance, 30 minutes per job. Skipped: `/proc`, `/sys`,
+  `/dev`, `/run`, and network file systems where `find` can tell them apart.
+
+**Consequences.** SSH passwords cross the internal network unencrypted. Anything that can reach the gRPC port can make the
+inspector log in anywhere with supplied credentials. Saving a server now logs in to it without another click, also in
+bulk add. Accounts without rights leave folders marked "brak dostępu". A listing can reach about 100 MB per server in
+H2 (estimate, not measured). Server-side `find` runs under `nice`, but still adds disk load on the target. Autoscaling was
+not run on a cluster when this was written. The Windows scripts were not run against a real Windows SSH target.

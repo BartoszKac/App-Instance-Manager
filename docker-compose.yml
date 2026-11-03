@@ -1,7 +1,8 @@
 services:
   backend:
     build:
-      context: ./App-Instance-Manager
+      context: .
+      dockerfile: App-Instance-Manager/Dockerfile
     image: app-instance-manager-backend:local
     container_name: aim-backend
     # Bound to localhost only: the API compiles and runs arbitrary code and has no authentication.
@@ -10,9 +11,32 @@ services:
     environment:
       # A container sees only its own Docker network, so the LAN to scan is configured here.
       AIM_NETWORK_SCAN_SUBNETS: ${AIM_SCAN_SUBNETS:-192.168.1.0/24}
+      AIM_INSPECTOR_TARGET: dns:///inspector:9090
     volumes:
       - aim-data:/opt/aim/data
       - aim-projects:/opt/aim/app
+    networks:
+      - default
+      - inspection
+    restart: unless-stopped
+
+  # No published port and no container_name, so `docker compose up --scale inspector=N` works.
+  # SSH passwords cross the `inspection` network unencrypted (ADR-014), so only the backend may join it.
+  inspector:
+    build:
+      context: .
+      dockerfile: App-Instance-Inspector/Dockerfile
+    image: app-instance-manager-inspector:local
+    networks:
+      - inspection
+      - inspector-egress
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
 
   frontend:
@@ -25,6 +49,11 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+networks:
+  inspection:
+    internal: true
+  inspector-egress:
 
 volumes:
   aim-data:

@@ -74,6 +74,12 @@ reverse DNS, service details, through `NmapRunner` → `LanguageProcess.captureO
 `SshSessionFactory.executeBounded` runs `resources/inventory/*` → `InventoryOutputParser`; next to it
 `POST /api/deploy/network/device-details` shows what the server exposes on the network.
 
+**Server inspection** (ADR-014)
+Saving a server with a password publishes `ServerCredentialsSavedEvent` → `InspectionService` saves a queued run →
+`InspectionDispatcher` calls `App-Instance-Inspector` over gRPC (async, one instance per call, round robin) → the inspector
+logs in over SSH and streams facts and file batches → `InspectionStreamObserver` → `InspectionStore` writes to H2 →
+`admin/` screen polls `/api/inspections/**`. Replicas scale on `GET /api/inspections/load` through KEDA and an HPA (`k8s/`).
+
 ## 5. Frontend structure
 
 Custom state router (`router/useRouter.ts`, screens: `projects`, `editor`, `deploy`, `execution`,
@@ -93,6 +99,7 @@ Each feature folder follows MVVM: `model/`, `viewmodel(s)/`, `views/`, `componen
 | CORS / WS | `@CrossOrigin("*")` per controller, `setAllowedOriginPatterns("*")` on `/ws-console` | Any website the user visits can drive the API |
 | Auth | None | Anyone reaching port 8888 controls the app |
 | Network scan | `POST /api/deploy/network/scan` starts nmap on a subnet from the backend's own cards or server config only (ADR-008, ADR-009, ADR-012); timeouts, limited concurrency, CORS limited to `localhost:5173`; nmap has `cap_net_raw` in the image | Reveals devices and service versions on the LAN to anyone reaching port 8888; non-browser clients are not limited by CORS; code run in the container can use nmap's raw sockets |
+| Inspection | Logs in automatically to every server saved with a password; fixed read-only scripts, no `sudo`, no file contents; host keys pinned on first use (ADR-014) | Full listing of file names, accounts and packages of each server is readable by anyone reaching port 8888; passwords cross the internal gRPC network unencrypted |
 | File names | Validated in `FileService` (`[A-Za-z0-9_-][A-Za-z0-9_.-]*`, resolved path must stay in the project folder); invalid → `400` | Mitigated for `POST /api/code/source`; legacy and upload endpoints not reviewed |
 
 ## 7. Known technical debt

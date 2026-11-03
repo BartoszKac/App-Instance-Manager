@@ -1,0 +1,45 @@
+.admin { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5) var(--space-6); }
+.admin__columns { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: var(--space-5); }
+
+.admin-servers { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); overflow-y: auto; }
+.admin-server { width: 100%; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); text-align: left; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.admin-server:hover { border-color: var(--line-strong); }
+.admin-server:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.admin-server[aria-current='true'] { border-color: var(--signal); background: var(--signal-wash); }
+.admin-server__body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.admin-server__name { font-family: var(--display); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-server__ip { font-family: var(--mono); font-size: var(--fs-xs); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-server__state { font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }
+
+.admin-results { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); overflow-y: auto; }
+.admin-summary { display: flex; flex-direction: column; gap: var(--space-2); }
+.admin-summary__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.admin-summary__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.admin-summary__name { font-family: var(--display); font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.02em; }
+.admin-summary__meta { font-size: var(--fs-sm); color: var(--text-muted); }
+.admin-summary__progress { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); color: var(--text-muted); }
+.admin-summary__trust { margin-left: var(--space-3); }
+
+.admin-facts { display: flex; flex-direction: column; gap: var(--space-3); }
+.admin-fact { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+.admin-fact__label { padding: var(--space-2) var(--space-3); font-size: var(--fs-sm); font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--line); }
+.admin-fact__value { max-height: 320px; overflow: auto; padding: var(--space-3); font-family: var(--mono); font-size: 12px; white-space: pre; }
+
+.file-tree { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow-x: auto; }
+.file-tree__group { list-style: none; }
+.file-tree__hint { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); font-size: var(--fs-xs); color: var(--text-muted); }
+.file-tree__more { margin: var(--space-1) var(--space-3); }
+
+.file-row { display: grid; grid-template-columns: minmax(240px, 1fr) 90px 150px 60px 150px; align-items: center; gap: var(--space-2); min-width: 720px; padding: 2px var(--space-3) 2px calc(var(--space-3) + var(--depth, 0) * 16px); border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
+.file-row__main { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 3px 0; text-align: left; }
+button.file-row__main:hover { color: var(--signal-strong); }
+button.file-row__main:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.file-row__name { font-family: var(--mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-row__cell { font-family: var(--mono); font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-row__size { text-align: right; }
+.file-row__denied { flex-shrink: 0; padding: 0 6px; font-size: var(--fs-xs); color: var(--warn); background: var(--warn-wash); border-radius: var(--radius-pill); }
+
+@media (max-width: 900px) {
+  .admin { padding: var(--space-4); overflow-y: auto; }
+  .admin__columns { display: flex; flex-direction: column; }
+}

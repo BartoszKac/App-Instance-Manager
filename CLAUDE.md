@@ -28,6 +28,9 @@ workflow and cross-module rules.
 |---|---|---|
 | `App-Instance-Manager/` | Backend: Spring Boot, Java, Maven, H2 file DB, JSch (SSH), STOMP WebSocket | `App-Instance-Manager/CLAUDE.md` |
 | `App-Instance-Menager-fronted/` | Frontend: React 19 + TypeScript + Vite, MVVM per feature | `App-Instance-Menager-fronted/CLAUDE.md` |
+| `App-Instance-Inspector/` | Microservice: logs in to servers over SSH and streams findings over gRPC (ADR-014) | `App-Instance-Inspector/CLAUDE.md` |
+| `proto/` | gRPC contract shared by the backend and the inspector | a change updates both modules |
+| `k8s/` | Kubernetes manifests with inspector autoscaling | `k8s/README.md` |
 | `docs/` | Project documentation for humans and Claude | see table below |
 | `.github/workflows/deploy.yml` | Mintlify docs → GitHub Pages | do not touch without a task |
 | `Git.bat` | Personal "add-all, commit, push" script | never run |

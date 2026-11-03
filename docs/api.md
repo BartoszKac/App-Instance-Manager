@@ -71,6 +71,34 @@ CORS as above. Connects to the server over SSH with its stored login and runs fi
 
 `ServerInventoryResponse`: `{ id, name, ip, user, connected, error|null, sections: { key, label, value }[] }`. Never contains the password.
 
+## Server credentials – `ServerCredentialsController` (`/api/deploy/server-credentials`)
+
+CORS as above. Changes only what the app stores, not the password on the server itself. Saving starts an inspection.
+
+| Method | Path | Body / params | Response |
+|---|---|---|---|
+| PUT | `/{id}` | `ServerCredentialsRequest { user, password }` | `204`; `400` empty user or password; `404` missing server |
+
+## Inspection – `InspectionController` (`/api/inspections`)
+
+CORS as above. Errors are `ProblemDetail` with a Polish `detail`. Never contains the password. Also started
+automatically when `POST /api/deploy/server` or `/server/bulk` saves a server with a password.
+
+| Method | Path | Body / params | Response |
+|---|---|---|---|
+| GET | `/servers` | – | `InspectionStatus[]`, one per server |
+| POST | `/servers/{id}` | – | `202` `InspectionStatus` (an active run is reused); `400` no password; `404` missing server |
+| GET | `/servers/{id}` | – | `{ status: InspectionStatus, sections: { key, label, category, value }[], fileCount }`; `404` |
+| GET | `/servers/{id}/files` | query `parent` (empty = roots), `page`, `size` (default 200, max 500) | `FilePage`, folders first; `404` |
+| GET | `/servers/{id}/files/search` | query `q`, `page`, `size` (default 100, max 500) | `FilePage`, match anywhere in the path, ignoring case; `404` |
+| DELETE | `/servers/{id}/host-key` | – | `204`; `404` |
+| GET | `/load` | – | `{ load }`, active plus queued runs; read by KEDA |
+
+`InspectionStatus`: `{ serverId, name, ip, user, state: "QUEUED"|"RUNNING"|"DONE"|"FAILED"|null, stage: "CONNECTING"|"FACTS"|"FILES"|null, filesFound, error|null, failureKind: "LOGIN_REJECTED"|"HOST_KEY_CHANGED"|"OTHER"|null, dataFrom|null, truncated }`. `dataFrom`, `truncated`, `sections` and files describe the last successful run.
+`FilePage`: `{ entries: { path, name, type: "f"|"d"|"l"|…, sizeBytes, owner, group, mode, modifiedEpochSeconds, denied }[], total }`.
+
+The gRPC contract between the backend and the inspector is `proto/inspection.proto`.
+
 ## Services – `ServiceCatalogController` (`/api/services`)
 
 CORS as above. Errors are `ProblemDetail` with a Polish `detail`.
@@ -132,6 +160,7 @@ mapping. `test/CodeController` shares the `/api/code` prefix — check before ad
 | `shared/network/networkApi.ts` | `/api/deploy/network/subnets`, `/network/scan`, `/network/scan/current`, `/network/device-details` |
 | `deploy/api/serversApi.ts` | `/api/deploy/server/bulk`, `/api/deploy/server-inventory/{id}` |
 | `services/api/servicesApi.ts` | `/api/services`, `/api/services/{id}` |
+| `admin/api/inspectionApi.ts` | `/api/inspections/servers`, `/servers/{id}`, `/servers/{id}/files`, `/servers/{id}/files/search`, `/servers/{id}/host-key`, `/api/deploy/server-credentials/{id}` |
 | `execution/viewmodels/useExecutionViewModel.ts` | `/api/deploy/programs`, `/servers`, `/program/execute` |
 | `process/model/remoteExecutableRepository.ts` | `/api/process/**` |
 | `terminal/PackageTerminal.tsx` | `/ws-console`, `/topic/output` |
