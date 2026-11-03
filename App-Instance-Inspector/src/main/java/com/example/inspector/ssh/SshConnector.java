@@ -1,8 +1,6 @@
 package com.example.inspector.ssh;
 
-import com.example.inspection.grpc.v1.InspectRequest;
 import com.example.inspector.inspection.InspectionFailure;
-import com.example.inspector.inspection.InspectionJob;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
@@ -10,6 +8,7 @@ import io.grpc.Status;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
+import java.util.function.Consumer;
 
 @Component
 public class SshConnector {
@@ -18,16 +17,16 @@ public class SshConnector {
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final int KEEP_ALIVE_MS = 30000;
 
-    public Session open(InspectRequest request, PinnedHostKeys hostKeys, InspectionJob job) {
+    public Session open(SshLogin login, PinnedHostKeys hostKeys, Consumer<Session> onCreated) {
         try {
             JSch jsch = new JSch();
             jsch.setHostKeyRepository(hostKeys);
-            Session session = jsch.getSession(request.getUser(), request.getHost(), SSH_PORT);
-            session.setPassword(request.getPassword());
+            Session session = jsch.getSession(login.user(), login.host(), SSH_PORT);
+            session.setPassword(login.password());
             session.setConfig("StrictHostKeyChecking", "yes");
             session.setConfig("PreferredAuthentications", "password");
             session.setServerAliveInterval(KEEP_ALIVE_MS);
-            job.attach(session);
+            onCreated.accept(session);
             session.connect(CONNECT_TIMEOUT_MS);
             return session;
         } catch (JSchException e) {

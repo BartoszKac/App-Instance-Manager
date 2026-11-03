@@ -80,6 +80,10 @@ Saving a server with a password publishes `ServerCredentialsSavedEvent` → `Ins
 logs in over SSH and streams facts and file batches → `InspectionStreamObserver` → `InspectionStore` writes to H2 →
 `admin/` screen polls `/api/inspections/**`. Replicas scale on `GET /api/inspections/load` through KEDA and an HPA (`k8s/`).
 
+**Direct upload** (ADR-015)
+Admin tab "Wyślij" → one `POST /api/transfers/servers/{id}/files` per file with a raw body → `DirectUploadService` streams it over
+gRPC → inspector writes over SFTP. The backend stores only `DirectUploadRecord` metadata.
+
 ## 5. Frontend structure
 
 Custom state router (`router/useRouter.ts`, screens: `projects`, `editor`, `deploy`, `execution`,
@@ -100,6 +104,7 @@ Each feature folder follows MVVM: `model/`, `viewmodel(s)/`, `views/`, `componen
 | Auth | None | Anyone reaching port 8888 controls the app |
 | Network scan | `POST /api/deploy/network/scan` starts nmap on a subnet from the backend's own cards or server config only (ADR-008, ADR-009, ADR-012); timeouts, limited concurrency, CORS limited to `localhost:5173`; nmap has `cap_net_raw` in the image | Reveals devices and service versions on the LAN to anyone reaching port 8888; non-browser clients are not limited by CORS; code run in the container can use nmap's raw sockets |
 | Inspection | Logs in automatically to every server saved with a password; fixed read-only scripts, no `sudo`, no file contents; host keys pinned on first use (ADR-014) | Full listing of file names, accounts and packages of each server is readable by anyone reaching port 8888; passwords cross the internal gRPC network unencrypted |
+| Direct upload | Writes client files to any path the stored SSH account can write, SFTP only, paths validated in the inspector, no overwrite by default (ADR-015) | Anyone reaching port 8888 can place or, with `overwrite`, replace files on registered servers |
 | File names | Validated in `FileService` (`[A-Za-z0-9_-][A-Za-z0-9_.-]*`, resolved path must stay in the project folder); invalid → `400` | Mitigated for `POST /api/code/source`; legacy and upload endpoints not reviewed |
 
 ## 7. Known technical debt

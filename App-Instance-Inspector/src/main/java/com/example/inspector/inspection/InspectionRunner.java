@@ -10,6 +10,7 @@ import com.example.inspection.grpc.v1.TargetPlatform;
 import com.example.inspector.ssh.PinnedHostKeys;
 import com.example.inspector.ssh.RemoteCommand;
 import com.example.inspector.ssh.SshConnector;
+import com.example.inspector.ssh.SshLogin;
 import com.jcraft.jsch.Session;
 import io.grpc.Status;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,8 @@ public class InspectionRunner {
     public void run(InspectRequest request, InspectionJob job) {
         stage(job, InspectionStage.INSPECTION_STAGE_CONNECTING);
         PinnedHostKeys hostKeys = new PinnedHostKeys(request.getPinnedHostKey());
-        Session session = connector.open(request, hostKeys, job);
+        SshLogin login = new SshLogin(request.getHost(), request.getUser(), request.getPassword());
+        Session session = connector.open(login, hostKeys, job::attach);
         try {
             stage(job, InspectionStage.INSPECTION_STAGE_FACTS);
             Platform platform = collectFacts(session, request, job);

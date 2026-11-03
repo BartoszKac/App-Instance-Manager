@@ -1,6 +1,7 @@
 package com.example.inspector.config;
 
 import com.example.inspector.grpc.InspectionGrpcService;
+import com.example.inspector.transfer.UploadGrpcService;
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.protobuf.services.HealthStatusManager;
@@ -24,6 +25,7 @@ public class GrpcServerLifecycle implements SmartLifecycle {
 
     private final InspectorProperties properties;
     private final InspectionGrpcService inspectionService;
+    private final UploadGrpcService uploadService;
 
     private Server server;
     private HealthStatusManager health;
@@ -66,6 +68,7 @@ public class GrpcServerLifecycle implements SmartLifecycle {
                 .maxConnectionAge(MAX_CONNECTION_AGE.toSeconds(), TimeUnit.SECONDS)
                 .maxConnectionAgeGrace(properties.jobTimeout().plus(SHUTDOWN_MARGIN).toSeconds(), TimeUnit.SECONDS)
                 .addService(inspectionService)
+                .addService(uploadService)
                 .addService(health.getHealthService())
                 .build();
     }

@@ -10,6 +10,7 @@ import com.example.DynamicCode.inspection.repository.InspectionHostKeyRepository
 import com.example.DynamicCode.inspection.repository.InspectionRunRepository;
 import com.example.DynamicCode.shared.event.ServerCredentialsSavedEvent;
 import com.example.DynamicCode.shared.event.ServerRemovedEvent;
+import com.example.DynamicCode.shared.metrics.InspectorWorkGauge;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -32,6 +33,7 @@ public class InspectionService {
     private final InspectionStore store;
     private final InspectionDispatcher dispatcher;
     private final InspectionMapper mapper;
+    private final InspectorWorkGauge workGauge;
 
     public synchronized InspectionStatusResponse start(Long serverId) {
         RemoteSerwerConfiguration server = servers.getConfigById(serverId);
@@ -48,7 +50,7 @@ public class InspectionService {
     }
 
     public long load() {
-        return runs.countByStateIn(InspectionState.ACTIVE);
+        return runs.countByStateIn(InspectionState.ACTIVE) + workGauge.activeUploads();
     }
 
     @EventListener

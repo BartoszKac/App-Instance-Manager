@@ -6,6 +6,7 @@ import { useInspectionDetails } from './useInspectionDetails';
 import { useInspectionServers } from './useInspectionServers';
 
 export const FILES_TAB = 'Pliki';
+export const UPLOAD_TAB = 'Wyślij';
 
 export const useAdminViewModel = () => {
   const servers = useInspectionServers();
@@ -19,7 +20,7 @@ export const useAdminViewModel = () => {
 
   const sections = useMemo(() => details.details?.sections ?? [], [details.details]);
   const categories = useMemo(() => [...new Set(sections.map((section) => section.category))], [sections]);
-  const tabs = useMemo(() => [FILES_TAB, ...categories], [categories]);
+  const tabs = useMemo(() => [FILES_TAB, UPLOAD_TAB, ...categories], [categories]);
   const activeTab = tabs.includes(tab) ? tab : FILES_TAB;
   const visibleSections = useMemo(() => sections.filter((section) => section.category === activeTab), [sections, activeTab]);
 

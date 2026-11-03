@@ -43,7 +43,7 @@ class InspectionGrpcServiceTest {
 
     @BeforeEach
     void start() throws IOException {
-        InspectorProperties properties = new InspectorProperties(0, 1, 10, 10, Duration.ofMinutes(1));
+        InspectorProperties properties = new InspectorProperties(0, 1, 10, 10, Duration.ofMinutes(1), 1, Duration.ofMinutes(1));
         String name = InProcessServerBuilder.generateName();
         server = InProcessServerBuilder.forName(name).addService(new InspectionGrpcService(runner, properties)).build().start();
         channel = InProcessChannelBuilder.forName(name).build();

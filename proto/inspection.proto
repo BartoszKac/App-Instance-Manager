@@ -10,6 +10,45 @@ service ServerInspection {
   rpc Inspect(InspectRequest) returns (stream InspectEvent);
 }
 
+service ServerFileTransfer {
+  rpc Upload(stream UploadChunk) returns (stream UploadEvent);
+}
+
+message UploadChunk {
+  oneof part {
+    UploadHeader header = 1;
+    bytes data = 2;
+  }
+}
+
+message UploadHeader {
+  string host = 1;
+  string user = 2;
+  string password = 3;
+  string pinned_host_key = 4;
+  string destination_dir = 5;
+  string relative_path = 6;
+  bool overwrite = 7;
+  int64 expected_size = 8;
+}
+
+message UploadEvent {
+  oneof event {
+    UploadAccepted accepted = 1;
+    UploadResult result = 2;
+  }
+}
+
+message UploadAccepted {
+  string host_key = 1;
+}
+
+message UploadResult {
+  string remote_path = 1;
+  int64 size_bytes = 2;
+  string sha256 = 3;
+}
+
 enum TargetPlatform {
   TARGET_PLATFORM_UNSPECIFIED = 0;
   TARGET_PLATFORM_POSIX = 1;

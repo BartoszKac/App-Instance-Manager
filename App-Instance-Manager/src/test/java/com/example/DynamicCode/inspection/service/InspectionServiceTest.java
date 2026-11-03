@@ -10,6 +10,7 @@ import com.example.DynamicCode.inspection.repository.InspectionHostKeyRepository
 import com.example.DynamicCode.inspection.repository.InspectionRunRepository;
 import com.example.DynamicCode.shared.event.ServerCredentialsSavedEvent;
 import com.example.DynamicCode.shared.event.ServerRemovedEvent;
+import com.example.DynamicCode.shared.metrics.InspectorWorkGauge;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,11 +47,12 @@ class InspectionServiceTest {
     @Mock
     private InspectionDispatcher dispatcher;
 
+    private final InspectorWorkGauge workGauge = new InspectorWorkGauge();
     private InspectionService service;
 
     @BeforeEach
     void setUp() {
-        service = new InspectionService(servers, runs, hostKeys, store, dispatcher, new InspectionMapper());
+        service = new InspectionService(servers, runs, hostKeys, store, dispatcher, new InspectionMapper(), workGauge);
         when(runs.findFirstByServerIdAndStateIn(any(), any())).thenReturn(Optional.empty());
         when(runs.findFirstByServerIdAndStateOrderByIdDesc(any(), any())).thenReturn(Optional.empty());
         when(runs.save(any())).thenAnswer(call -> withId(call.getArgument(0)));

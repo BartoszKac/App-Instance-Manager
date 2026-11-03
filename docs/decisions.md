@@ -268,3 +268,28 @@ inspector log in anywhere with supplied credentials. Saving a server now logs in
 bulk add. Accounts without rights leave folders marked "brak dostępu". A listing can reach about 100 MB per server in
 H2 (estimate, not measured). Server-side `find` runs under `nice`, but still adds disk load on the target. Autoscaling was
 not run on a cluster when this was written. The Windows scripts were not run against a real Windows SSH target.
+
+## ADR-015 – Direct upload through the inspector, content not kept (03.11.2026) — refines ADR-014
+
+**Context.** The user wants to send a file or a whole folder straight to a server, handled by the microservice, with
+nothing saved on the backend except the most important information about each file.
+
+**Decision.**
+- The inspector is no longer read-only: its upload path writes to servers. It uses SFTP only, never a shell, and the
+  inspection path stays read-only.
+- Path: browser → raw `application/octet-stream` body → backend → gRPC `ServerFileTransfer.Upload` → SFTP. Multipart is not
+  used, because Spring buffers it on disk. Chunks are 64 KiB and flow control limits memory use.
+- A folder is sent as one request per file, 3 at a time, each with its own SSH session on any replica. This keeps the
+  service stateless. On `503` the browser sends the file again, because the backend cannot replay a consumed body.
+- Inspector limit: 8 uploads per instance, kept apart from inspections. Backend limit: 32 at once. Active uploads count
+  toward `GET /api/inspections/load`.
+- Writes go to `.aim-part-<uuid>`, then the size is checked and the file renamed. Existing files stay unless `overwrite`.
+- `server.tomcat.max-swallow-size=-1`, so the browser receives the error instead of a broken connection when the upload is
+  refused early. A refused large file is still read and discarded first.
+- Host keys are shared with inspections and pinned on first use.
+
+**Consequences.** An upload holds one Tomcat thread, so requests beyond the limit get `503` and other endpoints stay
+free. This path is not asynchronous inside the backend, unlike inspections. One SSH login per file makes folders of many small
+files slow. Measured: 300 MB in 26 s between local containers. An upload may be cut after about 33 minutes,
+through the connection age limit of ADR-014, and can then be sent again. Overwriting removes the old file just before the
+rename, so a failure between the two steps loses it. Empty folders are not sent. Windows SFTP targets were not tested.
