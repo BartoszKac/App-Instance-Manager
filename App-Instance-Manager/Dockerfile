@@ -7,7 +7,8 @@ RUN --mount=type=cache,target=/root/.m2 mvn -q -B package -DskipTests
 
 FROM eclipse-temurin:17-jdk-jammy
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 g++ curl nmap \
+ && apt-get install -y --no-install-recommends python3 g++ curl nmap libcap2-bin \
+ && setcap cap_net_raw+eip /usr/bin/nmap \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --create-home --uid 10001 runner
 WORKDIR /opt/aim

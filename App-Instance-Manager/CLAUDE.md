@@ -59,6 +59,7 @@ com.example.DynamicCode
   code/       projects of source files: save, folders on disk, compile, launch locally
   deploy/     remote servers, SSH sessions, file transfer, remote programs, remote execution
   process/    uploaded executables (RemoteExecutable)
+  catalog/    services kept by the user (ManagedService)
   shared/     WebSocket config, FrontendNotificationService, GlobalExceptionHandler,
               CORS config, generic file helpers
   legacy/     former controller/test + service/**/test, @Profile("dev") — frozen, see section 3
@@ -94,6 +95,7 @@ their feature's `service/`; their generic interface `DataBaseProvider<T>` is in
 | `process` | `code.enums.LanguageType` |
 | `legacy` | anything (frozen) |
 | `code` | nothing from other features |
+| `catalog` | nothing from other features |
 
 Any new cross-feature import not in this table needs a decision in `docs/decisions.md`. Nothing
 outside `legacy` may import from `legacy`.

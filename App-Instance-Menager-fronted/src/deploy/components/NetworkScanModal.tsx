@@ -1,13 +1,11 @@
-import type { DiscoveredDevice } from '../model/NetworkScan';
+import type { DiscoveredDevice } from '@/shared/network/model';
 import type { NetworkScanViewModel } from '../viewmodel/useNetworkScan';
+import { DeviceDetails } from './DeviceDetails';
 import { Modal } from '@/shared/ui/Modal';
 import { Icon } from '@/shared/ui/Icon';
 import { Checkbox, EmptyState, Notice, Spinner } from '@/shared/ui/atoms';
 
 type ScanProps = { scan: NetworkScanViewModel };
-
-const HELPER_HINT = 'Lista zawiera urządzenia, które odpowiedziały na ping lub ARP. Uśpione urządzenie może się nie pojawić.';
-const DOCKER_HINT = 'Lista zawiera tylko urządzenia z otwartym typowym portem. Urządzenie uśpione lub za firewallem może się nie pojawić, a kolejny skan może dać inny wynik.';
 
 const SubnetPicker = ({ scan }: ScanProps) => (
   <div className="scan-picker">
@@ -19,13 +17,10 @@ const SubnetPicker = ({ scan }: ScanProps) => (
     </label>
     <button className="btn btn--primary" onClick={scan.scan} disabled={scan.isScanning || !scan.cidr}>
       {scan.isScanning ? <Spinner /> : <Icon name="search" size={16} />}
-      {scan.isScanning ? (scan.usesHelper ? 'Skanowanie…' : 'Skanowanie (do 4 min)…') : 'Skanuj'}
+      {scan.isScanning ? 'Skanowanie…' : 'Skanuj'}
     </button>
   </div>
 );
-
-const deviceDetails = (device: DiscoveredDevice) =>
-  [device.hostname, device.vendor].filter(Boolean).join(' · ') || 'Bez nazwy';
 
 const DeviceRow = ({ device, scan }: { device: DiscoveredDevice; scan: NetworkScanViewModel }) => {
   const known = scan.knownIps.has(device.ip);
@@ -33,10 +28,7 @@ const DeviceRow = ({ device, scan }: { device: DiscoveredDevice; scan: NetworkSc
     <li className="pick-row" data-checked={scan.picked.has(device.ip)}>
       <label className="pick-row__label">
         {!known && <Checkbox checked={scan.picked.has(device.ip)} onChange={() => scan.togglePicked(device.ip)} label={`Wybierz urządzenie ${device.ip}`} />}
-        <span className="pick-row__server">
-          <span className="pick-row__address">{device.ip}</span>
-          <span className="scan-row__details">{deviceDetails(device)}</span>
-        </span>
+        <DeviceDetails device={device} details={scan.details[device.ip]} isLoading={scan.pendingDetails.has(device.ip)} />
       </label>
       {known && <span className="pick-row__os">Już dodany</span>}
       {!known && device.sshOpen && <span className="scan-row__ssh">SSH</span>}
@@ -52,7 +44,7 @@ const ScanResult = ({ scan }: ScanProps) => {
       <ul className="pick-group__list scan-list">
         {scan.result.devices.map((device) => <DeviceRow key={device.ip} device={device} scan={scan} />)}
       </ul>
-      <p className="field__hint">{scan.usesHelper ? HELPER_HINT : DOCKER_HINT}</p>
+      <p className="field__hint">Lista zawiera urządzenia, które odpowiedziały na ping. Urządzenie uśpione lub blokujące ping może się nie pojawić.</p>
     </>
   );
 };
@@ -71,7 +63,7 @@ const SharedCredentials = ({ scan }: ScanProps) => (
 );
 
 const NoSubnets = () => (
-  <EmptyState title="Brak podsieci do skanowania" hint="Skan obsługuje prywatne podsieci /24 lub mniejsze na kartach sieciowych komputera z backendem." />
+  <EmptyState title="Brak podsieci do skanowania" hint="Ustaw AIM_SCAN_SUBNETS w docker-compose. Skan obsługuje prywatne podsieci /24 lub mniejsze." />
 );
 
 const ScanBody = ({ scan }: ScanProps) => {
@@ -79,7 +71,6 @@ const ScanBody = ({ scan }: ScanProps) => {
   if (scan.subnets.length === 0) return scan.error ? null : <NoSubnets />;
   return (
     <>
-      {!scan.usesHelper && <Notice tone="warn">Szybki skan jest wyłączony. Uruchom Start.bat. Bez niego skan w Dockerze trwa kilka minut i widzi mniej urządzeń.</Notice>}
       <SubnetPicker scan={scan} />
       <ScanResult scan={scan} />
       {scan.picked.size > 0 && scan.result && <SharedCredentials scan={scan} />}

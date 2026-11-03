@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { apiFetch } from '../api/deployHttp';
+import { apiFetch } from '@/shared/http';
 import { EMPTY_NEW_SERVER, getServerId } from '../model/DeployState';
 import type { DeployServer, NewServerForm } from '../model/DeployState';
 

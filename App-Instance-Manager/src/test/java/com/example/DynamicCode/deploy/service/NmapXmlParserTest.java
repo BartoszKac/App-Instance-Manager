@@ -28,62 +28,68 @@ class NmapXmlParserTest {
                     <address addr="192.168.1.10" addrtype="ipv4"/>
                     <address addr="AA:BB:CC:DD:EE:FF" addrtype="mac" vendor="Raspberry Pi"/>
                     <hostnames><hostname name="pi.local" type="PTR"/></hostnames>
-                    <ports><port protocol="tcp" portid="22"><state state="open"/></port></ports>
                   </host>
                 </nmaprun>
                 """;
 
-        List<DiscoveredDevice> devices = parser.parse(xml);
+        List<DiscoveredDevice> devices = parser.parseLiveHosts(xml);
 
         assertThat(devices).containsExactly(
-                new DiscoveredDevice("192.168.1.10", "pi.local", "AA:BB:CC:DD:EE:FF", "Raspberry Pi", true));
+                new DiscoveredDevice("192.168.1.10", "pi.local", "AA:BB:CC:DD:EE:FF", "Raspberry Pi", false, List.of()));
     }
 
     @Test
-    void shouldLeaveOptionalFieldsEmptyWhenNmapDidNotReportThem() {
+    void shouldCountHostWithoutOpenPortsWhenItAnsweredPing() {
+        String xml = HEADER + """
+                <nmaprun>
+                  <host><status state="up" reason="echo-reply"/><address addr="192.168.1.8" addrtype="ipv4"/></host>
+                </nmaprun>
+                """;
+
+        assertThat(parser.parseLiveHosts(xml)).extracting(DiscoveredDevice::ip).containsExactly("192.168.1.8");
+    }
+
+    @Test
+    void shouldSkipHostsThatAreDownAndHostHints() {
+        String xml = HEADER + """
+                <nmaprun>
+                  <hosthint><status state="up"/><address addr="192.168.1.30" addrtype="ipv4"/></hosthint>
+                  <host><status state="down"/><address addr="192.168.1.31" addrtype="ipv4"/></host>
+                </nmaprun>
+                """;
+
+        assertThat(parser.parseLiveHosts(xml)).isEmpty();
+    }
+
+    @Test
+    void shouldReadOnlyOpenPorts() {
         String xml = HEADER + """
                 <nmaprun>
                   <host>
-                    <status state="up"/>
                     <address addr="192.168.1.20" addrtype="ipv4"/>
                     <ports>
                       <port protocol="tcp" portid="22"><state state="closed"/></port>
                       <port protocol="tcp" portid="80"><state state="open"/></port>
+                      <port protocol="tcp" portid="443"><state state="filtered"/></port>
                     </ports>
                   </host>
                 </nmaprun>
                 """;
 
-        List<DiscoveredDevice> devices = parser.parse(xml);
-
-        assertThat(devices).containsExactly(new DiscoveredDevice("192.168.1.20", null, null, null, false));
+        assertThat(parser.parseOpenPorts(xml)).containsEntry("192.168.1.20", List.of(80));
     }
 
     @Test
-    void shouldSkipHostsWithoutOpenPortAndHostHints() {
-        String xml = HEADER + """
-                <nmaprun>
-                  <hosthint><status state="up"/><address addr="192.168.1.30" addrtype="ipv4"/></hosthint>
-                  <host><status state="down"/><address addr="192.168.1.31" addrtype="ipv4"/></host>
-                  <host starttime="1793658779" endtime="1793658809">
-                    <status state="up" reason="user-set" reason_ttl="0"/>
-                    <address addr="192.168.1.103" addrtype="ipv4"/>
-                    <hostnames></hostnames>
-                  </host>
-                  <host>
-                    <status state="up"/>
-                    <address addr="192.168.1.32" addrtype="ipv4"/>
-                    <ports><port protocol="tcp" portid="22"><state state="filtered"/></port></ports>
-                  </host>
-                </nmaprun>
-                """;
+    void shouldSetSshOpenWhenPortsContainSsh() {
+        DiscoveredDevice device = new DiscoveredDevice("192.168.1.1", null, null, null, false, List.of());
 
-        assertThat(parser.parse(xml)).isEmpty();
+        assertThat(device.withOpenPorts(List.of(22, 80)).sshOpen()).isTrue();
+        assertThat(device.withOpenPorts(List.of(80)).sshOpen()).isFalse();
     }
 
     @Test
     void shouldFailWhenOutputIsNotXml() {
-        assertThatThrownBy(() -> parser.parse("nmap: command output"))
+        assertThatThrownBy(() -> parser.parseLiveHosts("nmap: command output"))
                 .isInstanceOf(NetworkScanFailedException.class);
     }
 
@@ -97,7 +103,6 @@ class NmapXmlParserTest {
                     <status state="up"/>
                     <address addr="192.168.1.40" addrtype="ipv4"/>
                     <hostnames><hostname name="&secret;"/></hostnames>
-                    <ports><port protocol="tcp" portid="22"><state state="open"/></port></ports>
                   </host>
                 </nmaprun>
                 """;
@@ -107,7 +112,7 @@ class NmapXmlParserTest {
 
     private void assertThatNoSecretLeaks(String xml) {
         try {
-            assertThat(parser.parse(xml)).allSatisfy(device -> assertThat(device.hostname()).isNull());
+            assertThat(parser.parseLiveHosts(xml)).allSatisfy(device -> assertThat(device.hostname()).isNull());
         } catch (NetworkScanFailedException expectedWhenParserRejectsEntity) {
             assertThat(expectedWhenParserRejectsEntity).hasMessageContaining("nmap");
         }

@@ -1,7 +1,11 @@
 package com.example.DynamicCode.deploy.controller;
 
+import com.example.DynamicCode.deploy.dto.DeviceDetailsResponse;
 import com.example.DynamicCode.deploy.dto.DiscoveredDevice;
+import com.example.DynamicCode.deploy.dto.DiscoveredService;
 import com.example.DynamicCode.deploy.dto.NetworkScanResponse;
+import com.example.DynamicCode.deploy.enums.OperationSystem;
+import com.example.DynamicCode.deploy.exception.InvalidScanTargetException;
 import com.example.DynamicCode.deploy.exception.InvalidSubnetException;
 import com.example.DynamicCode.deploy.exception.NetworkScanFailedException;
 import com.example.DynamicCode.deploy.exception.NetworkScanInProgressException;
@@ -28,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NetworkDiscoveryControllerTest {
 
     private static final String CIDR = "192.168.1.0/24";
+    private static final String IP = "192.168.1.10";
 
     @Autowired
     private MockMvc mockMvc;
@@ -44,6 +49,12 @@ class NetworkDiscoveryControllerTest {
                 .content("{\"cidr\":\"" + CIDR + "\"}"));
     }
 
+    private ResultActions postDetails() throws Exception {
+        return mockMvc.perform(post("/api/deploy/network/device-details")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ip\":\"" + IP + "\"}"));
+    }
+
     @Test
     void shouldReturnSubnets() throws Exception {
         when(localSubnetService.listSubnets()).thenReturn(List.of(CIDR));
@@ -55,14 +66,35 @@ class NetworkDiscoveryControllerTest {
 
     @Test
     void shouldReturnDeviceCountAndDevicesWhenScanSucceeds() throws Exception {
-        DiscoveredDevice device = new DiscoveredDevice("192.168.1.10", "pi.local", null, null, true);
+        DiscoveredDevice device = new DiscoveredDevice(IP, "pi.local", null, null, true, List.of(22));
         when(networkScanService.scan(CIDR)).thenReturn(new NetworkScanResponse(CIDR, 1, List.of(device)));
 
         postScan()
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.deviceCount").value(1))
-                .andExpect(jsonPath("$.devices[0].ip").value("192.168.1.10"))
-                .andExpect(jsonPath("$.devices[0].sshOpen").value(true));
+                .andExpect(jsonPath("$.devices[0].ip").value(IP))
+                .andExpect(jsonPath("$.devices[0].sshOpen").value(true))
+                .andExpect(jsonPath("$.devices[0].openPorts[0]").value(22));
+    }
+
+    @Test
+    void shouldReturnDeviceDetails() throws Exception {
+        DiscoveredService service = new DiscoveredService(80, "http", "Apache httpd", "2.4.58", null, "Strona", null);
+        when(networkScanService.details(IP)).thenReturn(new DeviceDetailsResponse(
+                IP, "pi", "Linux", OperationSystem.LINUX, "Komputer lub serwer", List.of(service)));
+
+        postDetails()
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.osFamily").value("LINUX"))
+                .andExpect(jsonPath("$.services[0].product").value("Apache httpd"))
+                .andExpect(jsonPath("$.services[0].title").value("Strona"));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenDetailsTargetIsNotAllowed() throws Exception {
+        when(networkScanService.details(IP)).thenThrow(new InvalidScanTargetException());
+
+        postDetails().andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").isNotEmpty());
     }
 
     @Test

@@ -41,7 +41,8 @@ Backend: `NmapXmlParserTest`, `NetworkScanServiceTest`, `LocalSubnetServiceTest`
 - [x] `docs/api.md` updated, frontend caller added
 - [x] `docs/decisions.md` updated (ADR-008)
 - [x] Manual scan against a real network through the Docker nmap scan
-- [ ] Manual run of `lan-helper.ps1` through `Start.bat` and a scan from the UI (ADR-010)
+- [x] Windows helper removed; two-stage Docker scan and the Serwisy screen added (ADR-012)
+- [ ] Manual check of the scan modal and the Serwisy screen in a browser
 
 ## 📚 References
 ADR-008, Q5, Q8.

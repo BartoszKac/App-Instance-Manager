@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { apiFetch } from '../api/deployHttp';
+import { apiFetch } from '@/shared/http';
 import { getServerId } from '../model/DeployState';
 import type { BulkTransferItem, DeployFile, DeployServer } from '../model/DeployState';
 

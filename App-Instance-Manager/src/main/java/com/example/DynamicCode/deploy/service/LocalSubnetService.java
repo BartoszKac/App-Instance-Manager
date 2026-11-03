@@ -23,7 +23,10 @@ public class LocalSubnetService {
 
     private static final int MIN_PREFIX = 24;
     private static final int MAX_PREFIX = 30;
-    private static final Pattern IPV4_CIDR = Pattern.compile("(\\d{1,3}(?:\\.\\d{1,3}){3})/(\\d{1,2})");
+    private static final String OCTET = "(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)";
+    private static final String IPV4_TEXT = OCTET + "(?:\\." + OCTET + "){3}";
+    private static final Pattern IPV4 = Pattern.compile(IPV4_TEXT);
+    private static final Pattern IPV4_CIDR = Pattern.compile("(" + IPV4_TEXT + ")/(\\d{1,2})");
 
     private final List<String> configuredSubnets;
 
@@ -40,6 +43,16 @@ public class LocalSubnetService {
         } catch (SocketException e) {
             throw new NetworkScanFailedException("Nie udało się odczytać kart sieciowych tego komputera.", e);
         }
+    }
+
+    public boolean isAllowedHost(String ip) {
+        return ip != null && IPV4.matcher(ip).matches()
+                && listSubnets().stream().anyMatch(subnet -> subnetContains(subnet, ip));
+    }
+
+    static boolean subnetContains(String cidr, String ip) {
+        int prefix = Integer.parseInt(cidr.substring(cidr.indexOf('/') + 1));
+        return parseConfiguredSubnet(ip + "/" + prefix).filter(cidr::equals).isPresent();
     }
 
     static Optional<String> toPrivateCidr(InetAddress address, int prefix) {

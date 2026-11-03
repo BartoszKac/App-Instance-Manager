@@ -52,18 +52,24 @@ with a Polish `detail`.
 |---|---|---|---|
 | GET | `/subnets` | – | `string[]` private IPv4 subnets, `/24`–`/30`, from the backend host's network cards and `aim.network.scan-subnets`, e.g. `["192.168.1.0/24"]` |
 | POST | `/scan` | `NetworkScanRequest { cidr }` (must be an exact value from `/subnets`) | `NetworkScanResponse`; `400` subnet not allowed, `409` a scan is already running, `503` nmap missing or failed |
+| POST | `/device-details` | `DeviceDetailsRequest { ip }` (must be inside a subnet from `/subnets`) | `DeviceDetailsResponse`; `400` address not allowed, `409` too many running, `503` as above |
 
 `NetworkScanResponse`: `{ cidr, deviceCount, devices: DiscoveredDevice[] }`.
-`DiscoveredDevice`: `{ ip, hostname|null, macAddress|null, vendor|null, sshOpen }`.
+`DiscoveredDevice`: `{ ip, hostname|null, macAddress|null, vendor|null, sshOpen, openPorts: number[] }`.
+`DeviceDetailsResponse`: `{ ip, hostname|null, osName|null, osFamily: "LINUX"|"WINDOWS"|"MAC"|null, deviceType|null, services: DiscoveredService[] }`.
+`DiscoveredService`: `{ port, name|null, product|null, version|null, extraInfo|null, title|null, tlsSubject|null }`.
 
-## LAN helper – `lan-helper/lan-helper.ps1` (`http://localhost:8899`, not part of the backend)
+## Services – `ServiceCatalogController` (`/api/services`)
 
-Runs on the Windows host (ADR-010). Requires `Origin: http://localhost:5173`, otherwise `403`.
+CORS as above. Errors are `ProblemDetail` with a Polish `detail`.
 
 | Method | Path | Body / params | Response |
 |---|---|---|---|
-| GET | `/subnet` | – | `{ cidr }`; `503` when there is no private `/24`–`/30` network |
-| GET | `/scan` | – | `NetworkScanResponse` (`vendor` is always `null`); `503` as above, `500` when the scan fails |
+| GET | `` | – | `ManagedServiceResponse[]` |
+| POST | `` | `ManagedServiceRequest { name, host, port, description? }` | `201` `ManagedServiceResponse`; `400` invalid |
+| DELETE | `/{id}` | – | `204`; `404` missing |
+
+`ManagedServiceResponse`: `{ id, name, host, port, description|null }`.
 
 ## Process – `ProcessController` (`/api/process`)
 
@@ -111,7 +117,9 @@ mapping. `test/CodeController` shares the `/api/code` prefix — check before ad
 | `deploy/viewmodel/useDeployViewModel.ts` | `/api/code/source/main-class/all`, `/api/process`, `/api/deploy/servers` |
 | `deploy/viewmodel/useServers.ts` | `/api/deploy/servers`, `/server`, `/server/{id}` |
 | `deploy/viewmodel/useDeployRun.ts` | `/api/deploy/transfer/bulk` |
-| `deploy/api/networkApi.ts` | `/api/deploy/network/subnets`, `/network/scan`, `/api/deploy/server/bulk`, LAN helper `/subnet`, `/scan` |
+| `shared/network/networkApi.ts` | `/api/deploy/network/subnets`, `/network/scan`, `/network/device-details` |
+| `deploy/api/serversApi.ts` | `/api/deploy/server/bulk` |
+| `services/api/servicesApi.ts` | `/api/services`, `/api/services/{id}` |
 | `execution/viewmodels/useExecutionViewModel.ts` | `/api/deploy/programs`, `/servers`, `/program/execute` |
 | `process/model/remoteExecutableRepository.ts` | `/api/process/**` |
 | `terminal/PackageTerminal.tsx` | `/ws-console`, `/topic/output` |

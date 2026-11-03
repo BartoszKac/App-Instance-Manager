@@ -46,6 +46,28 @@ class LocalSubnetServiceTest {
                 .doesNotContain("8.8.8.0/24", "10.0.0.0/16", "--script=x", "example.com/24");
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "192.168.77.5, true",
+            "192.168.77.254, true",
+            "192.168.78.5, false",
+            "8.8.8.8, false",
+            "999.168.77.5, false",
+            "--script=x, false",
+            "192.168.77.5 -oN x, false",
+            "example.com, false"
+    })
+    void shouldAllowOnlyHostsInsideListedSubnet(String ip, boolean expected) {
+        LocalSubnetService service = new LocalSubnetService(List.of("192.168.77.0/24"));
+
+        assertThat(service.isAllowedHost(ip)).isEqualTo(expected);
+    }
+
+    @Test
+    void shouldRejectNullHost() {
+        assertThat(new LocalSubnetService(List.of("192.168.77.0/24")).isAllowedHost(null)).isFalse();
+    }
+
     @Test
     void shouldSkipIpv6Address() throws UnknownHostException {
         assertThat(LocalSubnetService.toPrivateCidr(InetAddress.getByName("fe80::1"), 64)).isEmpty();

@@ -1,7 +1,10 @@
 package com.example.DynamicCode.deploy.controller;
 
+import com.example.DynamicCode.deploy.dto.DeviceDetailsRequest;
+import com.example.DynamicCode.deploy.dto.DeviceDetailsResponse;
 import com.example.DynamicCode.deploy.dto.NetworkScanRequest;
 import com.example.DynamicCode.deploy.dto.NetworkScanResponse;
+import com.example.DynamicCode.deploy.exception.InvalidScanTargetException;
 import com.example.DynamicCode.deploy.exception.InvalidSubnetException;
 import com.example.DynamicCode.deploy.exception.NetworkScanFailedException;
 import com.example.DynamicCode.deploy.exception.NetworkScanInProgressException;
@@ -39,8 +42,13 @@ public class NetworkDiscoveryController {
         return networkScanService.scan(request.cidr());
     }
 
-    @ExceptionHandler(InvalidSubnetException.class)
-    public ProblemDetail handleInvalidSubnet(InvalidSubnetException e) {
+    @PostMapping("/device-details")
+    public DeviceDetailsResponse deviceDetails(@RequestBody DeviceDetailsRequest request) {
+        return networkScanService.details(request.ip());
+    }
+
+    @ExceptionHandler({InvalidSubnetException.class, InvalidScanTargetException.class})
+    public ProblemDetail handleInvalidTarget(RuntimeException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 

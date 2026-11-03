@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../api/deployHttp';
+import { apiFetch } from '@/shared/http';
 import type {
   DeployFile,
   DeployServer,

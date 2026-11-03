@@ -67,6 +67,11 @@
 .scan-summary { margin-top: var(--space-3); font-size: var(--fs-sm); color: var(--text-muted); }
 .scan-list { max-height: 260px; overflow-y: auto; margin-top: var(--space-2); }
 .scan-row__details { font-size: var(--fs-xs); color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal:has(.scan-list) { width: min(620px, 100%); }
+.scan-list .pick-row__server { gap: 2px; }
+.scan-row__details--mono { font-family: var(--mono); }
+.scan-row__ports { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.scan-row__port { padding: 1px 6px; border: 1px solid var(--line); border-radius: var(--radius-pill); font-family: var(--mono); font-size: var(--fs-xs); color: var(--text-muted); }
 .scan-row__ssh { font-family: var(--mono); font-size: var(--fs-xs); color: var(--ok); padding-right: var(--space-2); }
 .scan-credentials { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-top: var(--space-3); }
 

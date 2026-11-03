@@ -163,3 +163,48 @@ Docker or a faster Docker scan, the user chose the host script.
 **Consequences.** The helper must be started again after a reboot, through `Start.bat`. Windows-only.
 There is no automated test for the script. `Start.bat` uses `-ExecutionPolicy Bypass` for that one
 process only.
+
+## ADR-011 – More device details from the LAN helper (03.11.2026) — refines ADR-010
+
+**Context.** The user wants more and more accurate information about each device.
+
+**Decision.**
+- The helper also collects open ports (17 common ones), the SSH banner, the NetBIOS name, ping
+  latency and TTL, and pings twice before reading the ARP table.
+- MAC vendors come from nmap's `nmap-mac-prefixes`. `Start.bat` copies it out of the backend image to
+  `%LOCALAPPDATA%\AppInstanceManager`, so it is neither committed nor downloaded.
+- The OS is derived in order: SSH banner, Apple vendor, Windows-only ports, TTL. Every result carries
+  `osConfidence`, and the UI marks a `low` one as "szacunek". Bulk add uses `osFamily`, falling back
+  to `LINUX`.
+- Pure logic lives in `lan-helper/LanDeviceInfo.ps1`, tested by `LanDeviceInfo.Tests.ps1` without
+  network access. The network code of `lan-helper.ps1` has no automated test. The helper stops older
+  instances of itself at start, so `Start.bat` picks up a new version.
+
+**Consequences.** A scan takes several seconds longer. TTL guesses can be wrong, and a phone with a
+randomized MAC has no vendor. The vendor list dates from the image's nmap package.
+
+## ADR-012 – LAN scan only in Docker, two stages; services catalog (03.11.2026) — supersedes ADR-010 and ADR-011, refines ADR-009
+
+**Context.** The user wants everything to start from Docker and asked for more device information and
+a services tab. Tested from a container on Docker Desktop: an ICMP sweep of a /24 takes about 4 s and
+gave the same result three times, a TCP scan of live hosts about 4 s, and `nmap -sV` with scripts 8–60 s
+per device. TTL is rewritten by Docker's NAT (always 63), and ARP is not available. Chosen by the
+user: Docker only with the Windows helper removed, and a tab with detected and own services.
+
+**Decision.**
+- `lan-helper/` and `Start.bat` are removed. While the helper ran, HTTP.sys listened on all interfaces,
+  so ADR-010's "localhost only" did not hold at the socket level; a request needed a `localhost` Host
+  header and the allowed `Origin`, both of which a LAN client can send.
+- `POST /scan` is a sweep (`nmap --privileged -sn -PE`) followed by a TCP connect scan of live hosts,
+  replacing ADR-009's scan. A device counts when it answers ping. The image grants `cap_net_raw` to
+  the nmap binary, so the backend still runs as non-root `runner`.
+- `POST /device-details` runs `-sV --version-light` with the scripts `nbstat`, `http-title`,
+  `smb-os-discovery` and `ssl-cert` for one host from an allowed subnet. At most 3 run at once. The UI
+  loads them after the list, 2 at a time.
+- OS comes only from evidence in service data or SMB, with no TTL guess, and is empty otherwise.
+- New feature `catalog` with entity `ManagedService` (new table, no other schema change) and
+  `/api/services`: name, host, port, description. Adding a service does not connect to it. Found
+  services are kept in memory on the screen until saved.
+
+**Consequences.** No MAC or vendor. A device that blocks ping is not listed even with open ports.
+Any code run in the backend container can use nmap's raw socket capability, including NSE scripts.

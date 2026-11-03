@@ -79,10 +79,7 @@ npm run lint
 Swagger UI (springdoc): `http://localhost:8888/swagger-ui.html`.
 
 LAN scan ("Skanuj sieć" on the Wysyłka screen) needs `nmap` on the backend host's `PATH` when run
-outside Docker (Windows: `winget install Insecure.Nmap`). See ADR-008, ADR-009.
-
-`Start.bat` starts Docker and `lan-helper/lan-helper.ps1`, the fast LAN scan on `localhost:8899`
-(ADR-010), and opens the UI. Without the helper the UI falls back to the slower nmap scan.
+outside Docker (Windows: `winget install Insecure.Nmap`). See ADR-012.
 
 Whole app in Docker: UI on `http://localhost:5173` (nginx), backend with JDK 17 + python3 + g++ + nmap
 on `127.0.0.1:8888`, so Java/Python/C++/Bash projects compile and run in the container. LAN scan

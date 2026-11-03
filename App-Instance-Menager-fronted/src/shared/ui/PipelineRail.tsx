@@ -4,7 +4,7 @@ import { Icon } from './Icon';
 import type { IconName } from './Icon';
 import { prefersReducedMotion } from '@/shared/motion';
 
-export type StationId = 'code' | 'upload' | 'deploy' | 'execution';
+export type StationId = 'code' | 'upload' | 'deploy' | 'execution' | 'services';
 
 interface Station {
   id: StationId;
@@ -18,6 +18,7 @@ const STATIONS: Station[] = [
   { id: 'upload', label: 'Plik', hint: 'Prześlij gotowy plik', icon: 'upload' },
   { id: 'deploy', label: 'Wysyłka', hint: 'Wyślij na serwery', icon: 'ship' },
   { id: 'execution', label: 'Uruchom', hint: 'Komendy na serwerach', icon: 'run' },
+  { id: 'services', label: 'Serwisy', hint: 'Usługi w sieci i własna lista', icon: 'server' },
 ];
 
 interface PipelineRailProps {

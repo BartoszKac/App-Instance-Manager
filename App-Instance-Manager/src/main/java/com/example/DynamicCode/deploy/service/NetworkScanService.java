@@ -1,19 +1,20 @@
 package com.example.DynamicCode.deploy.service;
 
-import com.example.DynamicCode.code.service.LanguageProcess;
+import com.example.DynamicCode.deploy.dto.DeviceDetailsResponse;
 import com.example.DynamicCode.deploy.dto.DiscoveredDevice;
 import com.example.DynamicCode.deploy.dto.NetworkScanResponse;
+import com.example.DynamicCode.deploy.exception.InvalidScanTargetException;
 import com.example.DynamicCode.deploy.exception.InvalidSubnetException;
-import com.example.DynamicCode.deploy.exception.NetworkScanFailedException;
 import com.example.DynamicCode.deploy.exception.NetworkScanInProgressException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
@@ -21,15 +22,17 @@ import java.util.concurrent.locks.ReentrantLock;
 @RequiredArgsConstructor
 public class NetworkScanService {
 
-    private static final Duration SCAN_TIMEOUT = Duration.ofMinutes(4);
-    private static final String PROBED_PORTS = "22,80,135,139,443,445,3389,8080,9100,62078";
-    private static final String SCAN_FAILED_MESSAGE =
-            "Skan się nie udał. Sprawdź, czy nmap jest zainstalowany i dostępny w PATH.";
+    private static final Duration SWEEP_TIMEOUT = Duration.ofMinutes(1);
+    private static final Duration PORTS_TIMEOUT = Duration.ofMinutes(2);
+    private static final Duration DETAILS_TIMEOUT = Duration.ofMinutes(2);
+    private static final int MAX_PARALLEL_DETAILS = 3;
 
-    private final LanguageProcess languageProcess;
+    private final NmapRunner nmapRunner;
     private final LocalSubnetService localSubnetService;
     private final NmapXmlParser nmapXmlParser;
+    private final NmapDetailsParser nmapDetailsParser;
     private final ReentrantLock scanLock = new ReentrantLock();
+    private final Semaphore detailPermits = new Semaphore(MAX_PARALLEL_DETAILS);
 
     public NetworkScanResponse scan(String cidr) {
         if (localSubnetService.listSubnets().stream().noneMatch(subnet -> subnet.equals(cidr))) {
@@ -39,23 +42,40 @@ public class NetworkScanService {
             throw new NetworkScanInProgressException();
         }
         try {
-            return toResponse(cidr, nmapXmlParser.parse(runNmap(cidr)));
+            return toResponse(cidr, withOpenPorts(sweep(cidr)));
         } finally {
             scanLock.unlock();
         }
     }
 
-    private String runNmap(String cidr) {
-        List<String> command = List.of("nmap", "-Pn", "-sT", "-p", PROBED_PORTS, "--open",
-                "-T4", "--max-retries", "1", "-oX", "-", cidr);
-        try {
-            return languageProcess.captureOutput(command, SCAN_TIMEOUT);
-        } catch (IOException e) {
-            throw new NetworkScanFailedException(SCAN_FAILED_MESSAGE, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new NetworkScanFailedException(SCAN_FAILED_MESSAGE, e);
+    public DeviceDetailsResponse details(String ip) {
+        if (!localSubnetService.isAllowedHost(ip)) {
+            throw new InvalidScanTargetException();
         }
+        if (!detailPermits.tryAcquire()) {
+            throw new NetworkScanInProgressException();
+        }
+        try {
+            return nmapDetailsParser.parse(ip, nmapRunner.run(NmapCommands.details(ip), DETAILS_TIMEOUT));
+        } finally {
+            detailPermits.release();
+        }
+    }
+
+    private List<DiscoveredDevice> sweep(String cidr) {
+        return nmapXmlParser.parseLiveHosts(nmapRunner.run(NmapCommands.sweep(cidr), SWEEP_TIMEOUT));
+    }
+
+    private List<DiscoveredDevice> withOpenPorts(List<DiscoveredDevice> devices) {
+        if (devices.isEmpty()) {
+            return devices;
+        }
+        List<String> hosts = devices.stream().map(DiscoveredDevice::ip).toList();
+        String xml = nmapRunner.run(NmapCommands.openPorts(hosts), PORTS_TIMEOUT);
+        Map<String, List<Integer>> openPorts = nmapXmlParser.parseOpenPorts(xml);
+        return devices.stream()
+                .map(device -> device.withOpenPorts(openPorts.getOrDefault(device.ip(), List.of())))
+                .toList();
     }
 
     private NetworkScanResponse toResponse(String cidr, List<DiscoveredDevice> devices) {

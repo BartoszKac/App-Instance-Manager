@@ -1,0 +1,25 @@
+.services { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-5) var(--space-6); }
+.services__section { display: flex; flex-direction: column; gap: var(--space-3); }
+.services__title { font-family: var(--display); font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.02em; }
+.services__subnet { width: auto; max-width: 180px; }
+.services__pending { display: inline-flex; align-items: center; gap: var(--space-2); margin-left: var(--space-3); }
+
+.service-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-3); }
+.service-card { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.service-card__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.service-card__name { font-family: var(--display); font-weight: 600; }
+
+.services-table__wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.services-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.services-table th { padding: var(--space-2) var(--space-3); text-align: left; font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.services-table td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line); vertical-align: top; }
+.services-table tr:last-child td { border-bottom: 0; }
+.services-table__mono { display: block; font-family: var(--mono); font-size: 12px; }
+.services-table__sub { display: block; font-size: var(--fs-xs); color: var(--text-faint); overflow-wrap: anywhere; }
+.services-table__saved { font-size: var(--fs-xs); color: var(--ok); white-space: nowrap; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .services { padding: var(--space-4); }
+}
