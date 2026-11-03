@@ -27,9 +27,15 @@ class DeviceClassifierTest {
 
     @Test
     void shouldClassifyByMostSpecificPort() {
-        assertThat(DeviceClassifier.deviceType(List.of(80, 9100))).isEqualTo("Drukarka");
-        assertThat(DeviceClassifier.deviceType(List.of(53, 80, 445))).isEqualTo("Router lub serwer DNS");
-        assertThat(DeviceClassifier.deviceType(List.of(22))).isEqualTo("Komputer lub serwer");
-        assertThat(DeviceClassifier.deviceType(List.of(80))).isNull();
+        assertThat(DeviceClassifier.deviceType(List.of(80, 9100), null)).isEqualTo("Drukarka");
+        assertThat(DeviceClassifier.deviceType(List.of(53, 80, 445), null)).isEqualTo("Router lub serwer DNS");
+        assertThat(DeviceClassifier.deviceType(List.of(22), "server")).isEqualTo("Komputer lub serwer");
+        assertThat(DeviceClassifier.deviceType(List.of(80), null)).isNull();
+    }
+
+    @Test
+    void shouldPreferNameOverPorts() {
+        assertThat(DeviceClassifier.deviceType(List.of(), "Pixel-4a")).isEqualTo("Telefon");
+        assertThat(DeviceClassifier.deviceType(List.of(22), "iPhone-Jan")).isEqualTo("Telefon");
     }
 }

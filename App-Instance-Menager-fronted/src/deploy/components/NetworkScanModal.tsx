@@ -1,6 +1,7 @@
 import type { DiscoveredDevice } from '@/shared/network/model';
+import { DeviceMore, DeviceSummary } from '@/shared/network/DeviceSummary';
+import { ScanProgress } from '@/shared/network/ScanProgress';
 import type { NetworkScanViewModel } from '../viewmodel/useNetworkScan';
-import { DeviceDetails } from './DeviceDetails';
 import { Modal } from '@/shared/ui/Modal';
 import { Icon } from '@/shared/ui/Icon';
 import { Checkbox, EmptyState, Notice, Spinner } from '@/shared/ui/atoms';
@@ -24,25 +25,29 @@ const SubnetPicker = ({ scan }: ScanProps) => (
 
 const DeviceRow = ({ device, scan }: { device: DiscoveredDevice; scan: NetworkScanViewModel }) => {
   const known = scan.knownIps.has(device.ip);
+  const details = scan.job?.details[device.ip];
   return (
-    <li className="pick-row" data-checked={scan.picked.has(device.ip)}>
-      <label className="pick-row__label">
-        {!known && <Checkbox checked={scan.picked.has(device.ip)} onChange={() => scan.togglePicked(device.ip)} label={`Wybierz urządzenie ${device.ip}`} />}
-        <DeviceDetails device={device} details={scan.details[device.ip]} isLoading={scan.pendingDetails.has(device.ip)} />
-      </label>
-      {known && <span className="pick-row__os">Już dodany</span>}
-      {!known && device.sshOpen && <span className="scan-row__ssh">SSH</span>}
+    <li className="scan-device">
+      <div className="pick-row" data-checked={scan.isPicked(device)}>
+        <label className="pick-row__label">
+          {!known && <Checkbox checked={scan.isPicked(device)} onChange={() => scan.togglePicked(device)} label={`Wybierz urządzenie ${device.ip}`} />}
+          <DeviceSummary device={device} details={details} isPending={scan.isPending(device)} />
+        </label>
+        {known && <span className="pick-row__os">Już dodany</span>}
+      </div>
+      <DeviceMore details={details} />
     </li>
   );
 };
 
 const ScanResult = ({ scan }: ScanProps) => {
-  if (!scan.result) return null;
+  if (!scan.job) return null;
   return (
     <>
-      <p className="scan-summary" aria-live="polite">Znalezione urządzenia: <strong>{scan.result.deviceCount}</strong> w sieci {scan.result.cidr}</p>
+      <ScanProgress job={scan.job} />
+      <p className="scan-summary" aria-live="polite">Znalezione urządzenia: <strong>{scan.job.deviceCount}</strong> w sieci {scan.job.cidr}</p>
       <ul className="pick-group__list scan-list">
-        {scan.result.devices.map((device) => <DeviceRow key={device.ip} device={device} scan={scan} />)}
+        {scan.job.devices.map((device) => <DeviceRow key={device.ip} device={device} scan={scan} />)}
       </ul>
       <p className="field__hint">Lista zawiera urządzenia, które odpowiedziały na ping. Urządzenie uśpione lub blokujące ping może się nie pojawić.</p>
     </>
@@ -73,7 +78,7 @@ const ScanBody = ({ scan }: ScanProps) => {
     <>
       <SubnetPicker scan={scan} />
       <ScanResult scan={scan} />
-      {scan.picked.size > 0 && scan.result && <SharedCredentials scan={scan} />}
+      {scan.pickedCount > 0 && <SharedCredentials scan={scan} />}
     </>
   );
 };
@@ -84,9 +89,9 @@ export const NetworkScanModal = ({ scan }: ScanProps) => (
     description="Skanuj tylko sieć, którą zarządzasz lub na której skan masz zgodę."
     onClose={scan.close}
     footer={<>
-      <button className="btn btn--ghost" onClick={scan.close} disabled={scan.isAdding}>Anuluj</button>
+      <button className="btn btn--ghost" onClick={scan.close} disabled={scan.isAdding}>Zamknij</button>
       <button className="btn btn--primary" onClick={scan.addPicked} disabled={!scan.canAdd}>
-        {scan.isAdding && <Spinner />}{scan.isAdding ? 'Dodawanie…' : `Dodaj zaznaczone (${scan.picked.size})`}
+        {scan.isAdding && <Spinner />}{scan.isAdding ? 'Dodawanie…' : `Dodaj zaznaczone (${scan.pickedCount})`}
       </button>
     </>}
   >

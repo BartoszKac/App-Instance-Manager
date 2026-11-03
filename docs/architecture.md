@@ -64,10 +64,15 @@ command over SSH and returns output as a string.
 
 **LAN discovery**
 `GET /api/deploy/network/subnets` → `LocalSubnetService` lists private subnets of the host's cards →
-`POST /api/deploy/network/scan` → `NetworkScanService` → `NmapRunner` → `LanguageProcess.captureOutput`
-runs an nmap sweep, then a port scan of live hosts → `NmapXmlParser` → `POST /api/deploy/network/device-details`
-per device → `NmapDetailsParser` → shown by `useLanScan` in `NetworkScanModal` (chosen ones saved through
+`POST /api/deploy/network/scan` → `NetworkScanService` starts a background `ScanJob`: nmap sweep, ports,
+reverse DNS, service details, through `NmapRunner` → `LanguageProcess.captureOutput` → `useLanScan` polls
+`GET /api/deploy/network/scan/current` → shown in `NetworkScanModal` (chosen ones saved through
 `POST /api/deploy/server/bulk`) and in the Serwisy screen (chosen ones saved through `POST /api/services`).
+
+**Server preview**
+`ServerPreviewModal` → `GET /api/deploy/server-inventory/{id}` → `ServerInventoryService` →
+`SshSessionFactory.executeBounded` runs `resources/inventory/*` → `InventoryOutputParser`; next to it
+`POST /api/deploy/network/device-details` shows what the server exposes on the network.
 
 ## 5. Frontend structure
 

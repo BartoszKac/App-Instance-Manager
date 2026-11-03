@@ -67,7 +67,41 @@
 .scan-summary { margin-top: var(--space-3); font-size: var(--fs-sm); color: var(--text-muted); }
 .scan-list { max-height: 260px; overflow-y: auto; margin-top: var(--space-2); }
 .scan-row__details { font-size: var(--fs-xs); color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.modal:has(.scan-list) { width: min(620px, 100%); }
+.modal:has(.scan-list), .modal:has(.server-preview) { width: min(760px, 100%); }
+.modal__body:has(.server-preview), .modal__body:has(.scan-list) { max-height: 70vh; overflow-y: auto; }
+
+.scan-progress { display: flex; flex-direction: column; gap: 6px; margin-top: var(--space-3); }
+.scan-progress__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.scan-progress__stage { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); color: var(--text-muted); }
+.scan-progress__percent { font-family: var(--display); font-size: var(--fs-lg); font-variant-numeric: tabular-nums; }
+.scan-progress__track { height: 8px; overflow: hidden; border-radius: var(--radius-pill); background: var(--signal-wash); }
+.scan-progress__fill { display: block; height: 100%; border-radius: inherit; background: var(--signal); transition: width 0.4s ease; }
+.scan-progress__counters { font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.scan-device + .scan-device { border-top: 1px solid var(--line); }
+.device-more { padding: 0 var(--space-2) var(--space-2); }
+.device-more__summary { width: fit-content; font-size: var(--fs-sm); color: var(--signal); cursor: pointer; border-radius: var(--radius-sm); }
+.device-more__summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.device-facts { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); min-width: 0; }
+.device-facts__services { list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
+.device-facts__service { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.device-facts__service-title { font-family: var(--mono); font-size: 12.5px; font-weight: 500; }
+.device-facts__mono { font-family: var(--mono); font-size: var(--fs-xs); color: var(--text-muted); }
+.device-facts__script { margin-top: var(--space-1); }
+.device-facts__script-id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--text-faint); }
+.device-facts__pre { max-height: 180px; overflow: auto; margin: 2px 0 0; font-family: var(--mono); font-size: var(--fs-xs); color: var(--text-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.server-row__open { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 6px 0; text-align: left; background: none; border: 0; border-radius: var(--radius-sm); color: inherit; cursor: pointer; }
+.server-row__open:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.server-row__open:hover .pick-row__name { color: var(--signal); }
+.server-preview { display: flex; flex-direction: column; gap: var(--space-4); }
+.server-preview__section { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.server-preview__title { font-family: var(--display); font-size: var(--fs-md); font-weight: 600; }
+.server-preview__hint { font-size: var(--fs-sm); color: var(--text-muted); }
+.server-preview__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-2); }
+.server-preview__fact { min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.server-preview__label { font-size: var(--fs-xs); color: var(--text-faint); }
+.server-preview__value { max-height: 200px; overflow: auto; margin: 2px 0 0; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .scan-list .pick-row__server { gap: 2px; }
 .scan-row__details--mono { font-family: var(--mono); }
 .scan-row__ports { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }

@@ -13,6 +13,7 @@ final class DeviceClassifier {
     }
 
     private static final Map<String, OsMatch> OS_BY_KEYWORD = osByKeyword();
+    private static final Map<String, String> TYPE_BY_NAME = typeByName();
     private static final Map<Integer, String> TYPE_BY_PORT = typeByPort();
 
     private DeviceClassifier() {
@@ -27,7 +28,16 @@ final class DeviceClassifier {
                 .orElse(null);
     }
 
-    static String deviceType(List<Integer> openPorts) {
+    static String deviceType(List<Integer> openPorts, String hostname) {
+        String name = hostname == null ? "" : hostname.toLowerCase(Locale.ROOT);
+        return TYPE_BY_NAME.entrySet().stream()
+                .filter(entry -> name.contains(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElseGet(() -> typeFromPorts(openPorts));
+    }
+
+    private static String typeFromPorts(List<Integer> openPorts) {
         return TYPE_BY_PORT.entrySet().stream()
                 .filter(entry -> openPorts.contains(entry.getKey()))
                 .map(Map.Entry::getValue)
@@ -48,6 +58,17 @@ final class DeviceClassifier {
         os.put("mac os", new OsMatch("macOS", OperationSystem.MAC));
         os.put("darwin", new OsMatch("macOS", OperationSystem.MAC));
         return os;
+    }
+
+    private static Map<String, String> typeByName() {
+        Map<String, String> types = new LinkedHashMap<>();
+        for (String phone : List.of("pixel", "iphone", "galaxy", "android", "redmi", "xiaomi", "oneplus")) {
+            types.put(phone, "Telefon");
+        }
+        types.put("ipad", "Tablet");
+        types.put("macbook", "Laptop Apple");
+        types.put("printer", "Drukarka");
+        return types;
     }
 
     private static Map<Integer, String> typeByPort() {

@@ -14,17 +14,21 @@ const rowsFromPorts = (device: DiscoveredDevice): DetectedServiceRow[] =>
 
 const rowsFromDetails = (device: DiscoveredDevice, details: DeviceDetails): DetectedServiceRow[] =>
   details.services.map((s) => ({
-    key: `${device.ip}:${s.port}`, ip: device.ip, hostname: details.hostname ?? device.hostname, port: s.port,
+    key: `${device.ip}:${s.port}`, ip: device.ip, hostname: device.hostname ?? details.hostname, port: s.port,
     service: PORT_LABEL[s.port] ?? s.name ?? String(s.port),
     product: [s.product, s.version].filter(Boolean).join(' '),
     title: s.title ?? s.tlsSubject ?? '',
   }));
 
+const rowsOf = (device: DiscoveredDevice, details?: DeviceDetails) => {
+  const detailed = details ? rowsFromDetails(device, details) : [];
+  const known = new Set(detailed.map((row) => row.port));
+  const pending = rowsFromPorts(device).filter((row) => !known.has(row.port));
+  return [...detailed, ...pending].sort((a, b) => a.port - b.port);
+};
+
 const toRows = (devices: DiscoveredDevice[], details: Record<string, DeviceDetails>) =>
-  devices.flatMap((device) => {
-    const found = details[device.ip];
-    return found && found.services.length > 0 ? rowsFromDetails(device, found) : rowsFromPorts(device);
-  });
+  devices.flatMap((device) => rowsOf(device, details[device.ip]));
 
 const defaultName = (row: DetectedServiceRow) =>
   `${row.product || row.service} (${row.hostname ?? row.ip})`.slice(0, 100);
@@ -32,20 +36,19 @@ const defaultName = (row: DetectedServiceRow) =>
 export const useServicesViewModel = () => {
   const lan = useLanScan();
   const managed = useManagedServices();
-  const { loadSubnets, reset } = lan;
+  const { load } = lan;
   const { add, setError } = managed;
 
   useEffect(() => {
-    void loadSubnets();
-    return reset;
-  }, [loadSubnets, reset]);
+    void load();
+  }, [load]);
 
-  const rows = useMemo(() => toRows(lan.result?.devices ?? [], lan.details), [lan.result, lan.details]);
+  const rows = useMemo(() => toRows(lan.job?.devices ?? [], lan.job?.details ?? {}), [lan.job]);
   const savedKeys = useMemo(() => new Set(managed.services.map((s) => `${s.host}:${s.port}`)), [managed.services]);
 
   const saveDetected = useCallback(async (row: DetectedServiceRow) => {
     try {
-      await add({ name: defaultName(row), host: row.ip, port: row.port, description: row.title || null });
+      await add({ name: defaultName(row), host: row.ip, port: row.port, description: row.title.slice(0, 255) || null });
     } catch (err: unknown) {
       setError(errorMessage(err, 'Nie udało się zapisać serwisu.'));
     }

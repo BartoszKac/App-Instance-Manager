@@ -12,6 +12,8 @@ import { useDeploy, useDeployProgress } from './useDeployRun';
 import { useDeployFiles } from './useDeployFiles';
 import { useNetworkScan } from './useNetworkScan';
 import type { NetworkScanViewModel } from './useNetworkScan';
+import { useServerPreview } from './useServerPreview';
+import type { ServerPreviewViewModel } from './useServerPreview';
 import { useServers } from './useServers';
 
 export interface DeployViewModel {
@@ -41,6 +43,7 @@ export interface DeployViewModel {
   addingServer: boolean;
   addServerError: string | null;
   networkScan: NetworkScanViewModel;
+  serverPreview: ServerPreviewViewModel;
 }
 
 interface InitialData {
@@ -82,9 +85,10 @@ export function useDeployViewModel(): DeployViewModel {
   const { loading, loadError } = useInitialLoad({ setMainClasses: files.setMainClasses, setProcesses: files.setProcesses, setAllServers: servers.setAllServers });
   const knownIps = useMemo(() => servers.allServers.map((s) => s.ip), [servers.allServers]);
   const networkScan = useNetworkScan(knownIps, servers.reloadServers);
+  const serverPreview = useServerPreview();
 
   return {
-    loading, loadError, canDeploy, deploy, networkScan,
+    loading, loadError, canDeploy, deploy, networkScan, serverPreview,
     files: files.files, selectedFiles: files.selectedFiles, selectedFilesList: files.selectedFilesList,
     setFileStrategy: files.setFileStrategy, toggleFile: files.toggleFile, toggleAllFiles: files.toggleAllFiles,
     allServers: servers.allServers, selectedServers: servers.selectedServers, selectedServersList: servers.selectedServersList,

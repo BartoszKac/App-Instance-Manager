@@ -1,6 +1,9 @@
+import { DeviceMore, DeviceSummary } from '@/shared/network/DeviceSummary';
+import { ScanProgress } from '@/shared/network/ScanProgress';
+import type { ScanJob } from '@/shared/network/model';
 import type { DetectedServiceRow } from '../model/ManagedService';
 import type { ServicesViewModel } from '../viewmodels/useServicesViewModel';
-import { EmptyState, Spinner } from '@/shared/ui/atoms';
+import { EmptyState } from '@/shared/ui/atoms';
 
 type Props = { vm: ServicesViewModel };
 
@@ -29,22 +32,30 @@ const Table = ({ vm }: Props) => (
   </div>
 );
 
-const Summary = ({ vm }: Props) => {
-  if (!vm.lan.result) return null;
-  const pending = vm.lan.pendingDetails.size;
+const Devices = ({ job }: { job: ScanJob }) => (
+  <ul className="service-list">
+    {job.devices.map((device) => {
+      const details = job.details[device.ip];
+      return (
+        <li key={device.ip} className="service-card service-card--device">
+          <DeviceSummary device={device} details={details} isPending={job.state === 'RUNNING' && (job.stage !== 'DETAILS' || device.openPorts.length > 0)} />
+          <DeviceMore details={details} />
+        </li>
+      );
+    })}
+  </ul>
+);
+
+export const DetectedServices = ({ vm }: Props) => {
+  const job = vm.lan.job;
   return (
-    <p className="scan-summary" aria-live="polite">
-      Urządzenia: <strong>{vm.lan.result.deviceCount}</strong>, usługi: <strong>{vm.rows.length}</strong>
-      {pending > 0 && <span className="services__pending"><Spinner /> Doczytywanie szczegółów, zostało urządzeń: {pending}</span>}
-    </p>
+    <section className="services__section" aria-label="Wyniki skanu sieci">
+      <h2 className="services__title">Wykryte w sieci</h2>
+      {!job && <EmptyState title="Nie ma jeszcze wyników" hint="Wybierz podsieć u góry i kliknij Skanuj." />}
+      {job && <ScanProgress job={job} />}
+      {job && <p className="scan-summary" aria-live="polite">Urządzenia: <strong>{job.deviceCount}</strong>, usługi: <strong>{vm.rows.length}</strong></p>}
+      {job && <Devices job={job} />}
+      {vm.rows.length > 0 && <Table vm={vm} />}
+    </section>
   );
 };
-
-export const DetectedServices = ({ vm }: Props) => (
-  <section className="services__section" aria-label="Usługi wykryte w sieci">
-    <h2 className="services__title">Wykryte w sieci</h2>
-    <Summary vm={vm} />
-    {!vm.lan.result && <EmptyState title="Nie ma jeszcze wyników" hint="Wybierz podsieć u góry i kliknij Skanuj." />}
-    {vm.rows.length > 0 && <Table vm={vm} />}
-  </section>
-);

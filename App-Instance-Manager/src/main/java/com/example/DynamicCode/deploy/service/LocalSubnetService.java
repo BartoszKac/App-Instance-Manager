@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -48,6 +49,22 @@ public class LocalSubnetService {
     public boolean isAllowedHost(String ip) {
         return ip != null && IPV4.matcher(ip).matches()
                 && listSubnets().stream().anyMatch(subnet -> subnetContains(subnet, ip));
+    }
+
+    static List<String> hostsOf(String cidr) {
+        String[] parts = cidr.split("/");
+        int prefix = Integer.parseInt(parts[1]);
+        int network = ipv4ToInt(parts[0]);
+        int hostCount = (1 << (32 - prefix)) - 2;
+        return IntStream.rangeClosed(1, hostCount).mapToObj(offset -> formatIpv4(network + offset)).toList();
+    }
+
+    private static int ipv4ToInt(String ip) {
+        int value = 0;
+        for (String octet : ip.split("\\.")) {
+            value = (value << 8) | Integer.parseInt(octet);
+        }
+        return value;
     }
 
     static boolean subnetContains(String cidr, String ip) {

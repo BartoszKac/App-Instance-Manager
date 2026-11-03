@@ -208,3 +208,30 @@ user: Docker only with the Windows helper removed, and a tab with detected and o
 
 **Consequences.** No MAC or vendor. A device that blocks ping is not listed even with open ports.
 Any code run in the backend container can use nmap's raw socket capability, including NSE scripts.
+
+## ADR-013 – Scan as a background job with progress; SSH inventory of servers (03.11.2026) — refines ADR-012
+
+**Context.** The user wants a percentage and counters during a scan, as much information as possible
+about each device, and a preview of a registered server: what it is, its system and resources.
+Measured from the container: `--top-ports 1000` with default retries hit a 150 s limit on one host, with
+`--max-retries 1 --max-rtt-timeout 800ms --min-parallelism 32` it took 5–8 s and found ports the short
+list missed. Reverse DNS through the router returned real names; the container's own DNS did not.
+
+**Decision.**
+- `POST /scan` starts a background job and answers `202`. `GET /scan/current` returns progress and
+  partial results; the UI polls it every second. Only the latest job is kept, in memory. No cancel.
+- Stages and percent weights live in `ScanStage`: sweep of 16-address chunks (20), top 1000 ports per
+  device (25), reverse DNS through hosts with port 53 open (5), details (50). Details run as one `-sV` with
+  scripts per open port plus one host-script run per device, each with its own limit, because a single slow
+  port (measured up to 62 s) past nmap's `--host-timeout` discards the whole host's result. A port that
+  gives nothing stays listed as unrecognized.
+- Detail scripts are read-only probes without login attempts. Scripts that try credentials, such as
+  `ftp-anon` or SNMP community guessing, are deliberately left out.
+- `GET /api/deploy/server-inventory/{id}` runs fixed read-only scripts from
+  `resources/inventory` over the stored SSH login, with a 45 s limit and bounded output. They take no
+  input from the client and never use `sudo`. A failed login is a normal answer with `connected: false`.
+  The response never contains the password.
+
+**Consequences.** Opening a preview sends the stored password to the server over SSH with
+`StrictHostKeyChecking=no`, the known weakness in the security table. Network data for a server outside the
+allowed subnets is not available (`400`). The percentage moves by stage, so a slow device can hold it still.

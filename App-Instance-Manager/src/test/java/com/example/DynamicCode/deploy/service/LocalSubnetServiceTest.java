@@ -64,6 +64,13 @@ class LocalSubnetServiceTest {
     }
 
     @Test
+    void shouldListUsableHostsOfSubnet() {
+        assertThat(LocalSubnetService.hostsOf("192.168.1.0/24")).hasSize(254)
+                .startsWith("192.168.1.1").endsWith("192.168.1.254");
+        assertThat(LocalSubnetService.hostsOf("10.0.0.8/30")).containsExactly("10.0.0.9", "10.0.0.10");
+    }
+
+    @Test
     void shouldRejectNullHost() {
         assertThat(new LocalSubnetService(List.of("192.168.77.0/24")).isAllowedHost(null)).isFalse();
     }

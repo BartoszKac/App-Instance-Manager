@@ -51,13 +51,25 @@ with a Polish `detail`.
 | Method | Path | Body / params | Response |
 |---|---|---|---|
 | GET | `/subnets` | – | `string[]` private IPv4 subnets, `/24`–`/30`, from the backend host's network cards and `aim.network.scan-subnets`, e.g. `["192.168.1.0/24"]` |
-| POST | `/scan` | `NetworkScanRequest { cidr }` (must be an exact value from `/subnets`) | `NetworkScanResponse`; `400` subnet not allowed, `409` a scan is already running, `503` nmap missing or failed |
-| POST | `/device-details` | `DeviceDetailsRequest { ip }` (must be inside a subnet from `/subnets`) | `DeviceDetailsResponse`; `400` address not allowed, `409` too many running, `503` as above |
+| POST | `/scan` | `NetworkScanRequest { cidr }` (must be an exact value from `/subnets`) | `202` `ScanJobResponse`; `400` subnet not allowed, `409` a scan is already running |
+| GET | `/scan/current` | – | `ScanJobResponse` of the latest scan; `204` when there was none |
+| POST | `/device-details` | `DeviceDetailsRequest { ip }` (must be inside a subnet from `/subnets`) | `DeviceDetailsResponse`; `400` address not allowed, `409` too many running, `503` nmap missing or failed |
 
-`NetworkScanResponse`: `{ cidr, deviceCount, devices: DiscoveredDevice[] }`.
-`DiscoveredDevice`: `{ ip, hostname|null, macAddress|null, vendor|null, sshOpen, openPorts: number[] }`.
-`DeviceDetailsResponse`: `{ ip, hostname|null, osName|null, osFamily: "LINUX"|"WINDOWS"|"MAC"|null, deviceType|null, services: DiscoveredService[] }`.
-`DiscoveredService`: `{ port, name|null, product|null, version|null, extraInfo|null, title|null, tlsSubject|null }`.
+`ScanJobResponse`: `{ id, cidr, state: "RUNNING"|"DONE"|"FAILED", stage: "SWEEP"|"PORTS"|"NAMES"|"DETAILS", percent, addressesTotal, addressesScanned, portsScanned, detailsTotal, detailsDone, deviceCount, devices: DiscoveredDevice[], details: { [ip]: DeviceDetailsResponse }, error|null }`.
+`DiscoveredDevice`: `{ ip, hostname|null, macAddress|null, vendor|null, sshOpen, openPorts: number[], deviceType|null }`.
+`DeviceDetailsResponse`: `{ ip, hostname|null, macAddress|null, osName|null, osFamily: "LINUX"|"WINDOWS"|"MAC"|null, deviceType|null, services: DiscoveredService[], hostScripts: ScriptResult[] }`.
+`DiscoveredService`: `{ port, name|null, product|null, version|null, extraInfo|null, title|null, tlsSubject|null, cpe: string[], scripts: ScriptResult[] }`.
+`ScriptResult`: `{ id, output }`.
+
+## Server inventory – `ServerInventoryController` (`/api/deploy/server-inventory`)
+
+CORS as above. Connects to the server over SSH with its stored login and runs fixed read-only scripts.
+
+| Method | Path | Body / params | Response |
+|---|---|---|---|
+| GET | `/{id}` | – | `ServerInventoryResponse`, also when SSH fails (`connected: false`, `error`); `404` missing server |
+
+`ServerInventoryResponse`: `{ id, name, ip, user, connected, error|null, sections: { key, label, value }[] }`. Never contains the password.
 
 ## Services – `ServiceCatalogController` (`/api/services`)
 
@@ -117,8 +129,8 @@ mapping. `test/CodeController` shares the `/api/code` prefix — check before ad
 | `deploy/viewmodel/useDeployViewModel.ts` | `/api/code/source/main-class/all`, `/api/process`, `/api/deploy/servers` |
 | `deploy/viewmodel/useServers.ts` | `/api/deploy/servers`, `/server`, `/server/{id}` |
 | `deploy/viewmodel/useDeployRun.ts` | `/api/deploy/transfer/bulk` |
-| `shared/network/networkApi.ts` | `/api/deploy/network/subnets`, `/network/scan`, `/network/device-details` |
-| `deploy/api/serversApi.ts` | `/api/deploy/server/bulk` |
+| `shared/network/networkApi.ts` | `/api/deploy/network/subnets`, `/network/scan`, `/network/scan/current`, `/network/device-details` |
+| `deploy/api/serversApi.ts` | `/api/deploy/server/bulk`, `/api/deploy/server-inventory/{id}` |
 | `services/api/servicesApi.ts` | `/api/services`, `/api/services/{id}` |
 | `execution/viewmodels/useExecutionViewModel.ts` | `/api/deploy/programs`, `/servers`, `/program/execute` |
 | `process/model/remoteExecutableRepository.ts` | `/api/process/**` |

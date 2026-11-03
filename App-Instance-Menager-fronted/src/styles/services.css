@@ -6,6 +6,7 @@
 
 .service-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-3); }
 .service-card { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.service-card--device { flex-direction: column; align-items: stretch; }
 .service-card__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .service-card__name { font-family: var(--display); font-weight: 600; }
 

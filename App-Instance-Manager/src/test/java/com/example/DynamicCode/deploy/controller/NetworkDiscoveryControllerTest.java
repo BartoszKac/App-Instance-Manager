@@ -3,8 +3,10 @@ package com.example.DynamicCode.deploy.controller;
 import com.example.DynamicCode.deploy.dto.DeviceDetailsResponse;
 import com.example.DynamicCode.deploy.dto.DiscoveredDevice;
 import com.example.DynamicCode.deploy.dto.DiscoveredService;
-import com.example.DynamicCode.deploy.dto.NetworkScanResponse;
+import com.example.DynamicCode.deploy.dto.ScanJobResponse;
 import com.example.DynamicCode.deploy.enums.OperationSystem;
+import com.example.DynamicCode.deploy.enums.ScanStage;
+import com.example.DynamicCode.deploy.enums.ScanState;
 import com.example.DynamicCode.deploy.exception.InvalidScanTargetException;
 import com.example.DynamicCode.deploy.exception.InvalidSubnetException;
 import com.example.DynamicCode.deploy.exception.NetworkScanFailedException;
@@ -20,6 +22,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -33,6 +37,8 @@ class NetworkDiscoveryControllerTest {
 
     private static final String CIDR = "192.168.1.0/24";
     private static final String IP = "192.168.1.10";
+    private static final ScanJobResponse JOB = new ScanJobResponse("id-1", CIDR, ScanState.RUNNING, ScanStage.PORTS, 30, 254, 254,
+            1, 0, 0, 1, List.of(new DiscoveredDevice(IP, "pi", null, null, true, List.of(22), null)), Map.of(), null);
 
     @Autowired
     private MockMvc mockMvc;
@@ -65,29 +71,43 @@ class NetworkDiscoveryControllerTest {
     }
 
     @Test
-    void shouldReturnDeviceCountAndDevicesWhenScanSucceeds() throws Exception {
-        DiscoveredDevice device = new DiscoveredDevice(IP, "pi.local", null, null, true, List.of(22));
-        when(networkScanService.scan(CIDR)).thenReturn(new NetworkScanResponse(CIDR, 1, List.of(device)));
+    void shouldAcceptScanAndReturnProgress() throws Exception {
+        when(networkScanService.startScan(CIDR)).thenReturn(JOB);
 
         postScan()
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.deviceCount").value(1))
-                .andExpect(jsonPath("$.devices[0].ip").value(IP))
-                .andExpect(jsonPath("$.devices[0].sshOpen").value(true))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.id").value("id-1"))
+                .andExpect(jsonPath("$.percent").value(30))
+                .andExpect(jsonPath("$.stage").value("PORTS"))
                 .andExpect(jsonPath("$.devices[0].openPorts[0]").value(22));
     }
 
     @Test
+    void shouldReturnCurrentScan() throws Exception {
+        when(networkScanService.currentScan()).thenReturn(Optional.of(JOB));
+
+        mockMvc.perform(get("/api/deploy/network/scan/current"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.addressesScanned").value(254));
+    }
+
+    @Test
+    void shouldReturnNoContentWhenNoScanYet() throws Exception {
+        when(networkScanService.currentScan()).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/deploy/network/scan/current")).andExpect(status().isNoContent());
+    }
+
+    @Test
     void shouldReturnDeviceDetails() throws Exception {
-        DiscoveredService service = new DiscoveredService(80, "http", "Apache httpd", "2.4.58", null, "Strona", null);
+        DiscoveredService service = new DiscoveredService(80, "http", "Apache httpd", "2.4.58", null, "Strona", null, List.of(), List.of());
         when(networkScanService.details(IP)).thenReturn(new DeviceDetailsResponse(
-                IP, "pi", "Linux", OperationSystem.LINUX, "Komputer lub serwer", List.of(service)));
+                IP, "pi", null, "Linux", OperationSystem.LINUX, "Komputer lub serwer", List.of(service), List.of()));
 
         postDetails()
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.osFamily").value("LINUX"))
-                .andExpect(jsonPath("$.services[0].product").value("Apache httpd"))
-                .andExpect(jsonPath("$.services[0].title").value("Strona"));
+                .andExpect(jsonPath("$.services[0].product").value("Apache httpd"));
     }
 
     @Test
@@ -99,23 +119,23 @@ class NetworkDiscoveryControllerTest {
 
     @Test
     void shouldReturnBadRequestWhenSubnetIsNotAllowed() throws Exception {
-        when(networkScanService.scan(CIDR)).thenThrow(new InvalidSubnetException());
+        when(networkScanService.startScan(CIDR)).thenThrow(new InvalidSubnetException());
 
         postScan().andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").isNotEmpty());
     }
 
     @Test
     void shouldReturnConflictWhenScanIsRunning() throws Exception {
-        when(networkScanService.scan(CIDR)).thenThrow(new NetworkScanInProgressException());
+        when(networkScanService.startScan(CIDR)).thenThrow(new NetworkScanInProgressException());
 
         postScan().andExpect(status().isConflict());
     }
 
     @Test
-    void shouldReturnServiceUnavailableWithHintWhenNmapFails() throws Exception {
-        when(networkScanService.scan(CIDR)).thenThrow(new NetworkScanFailedException("brak nmap", null));
+    void shouldReturnServiceUnavailableWithHintWhenDetailsFail() throws Exception {
+        when(networkScanService.details(IP)).thenThrow(new NetworkScanFailedException("brak nmap", null));
 
-        postScan().andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.detail").value("brak nmap"));
+        postDetails().andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.detail").value("brak nmap"));
     }
 
     @Test

@@ -16,17 +16,20 @@ class NmapDetailsParserTest {
     private final NmapDetailsParser parser = new NmapDetailsParser();
 
     @Test
-    void shouldReadServicesOsAndTitle() {
+    void shouldReadServicesOsCpeAndScripts() {
         String xml = """
                 <nmaprun><host>
-                  <address addr="192.168.1.67" addrtype="ipv4"/>
                   <ports>
                     <port protocol="tcp" portid="22"><state state="open"/>
-                      <service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu 3ubuntu13.20" extrainfo="Ubuntu Linux; protocol 2.0" ostype="Linux"/>
+                      <service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu 3ubuntu13.20" extrainfo="Ubuntu Linux; protocol 2.0" ostype="Linux">
+                        <cpe>cpe:/a:openbsd:openssh:9.6p1</cpe>
+                      </service>
                     </port>
                     <port protocol="tcp" portid="80"><state state="open"/>
-                      <service name="http" product="Apache httpd" version="2.4.58" extrainfo="(Ubuntu)"/>
-                      <script id="http-title" output="Apache2 Ubuntu Default Page"><elem key="title">Apache2 Ubuntu Default Page</elem></script>
+                      <service name="http" product="Apache httpd" version="2.4.58"/>
+                      <script id="http-title" output="Strona"><elem key="title">Strona</elem></script>
+                      <script id="http-headers" output="  Server: Apache "/>
+                      <script id="fingerprint-strings" output="szum"/>
                     </port>
                   </ports>
                 </host></nmaprun>
@@ -37,19 +40,22 @@ class NmapDetailsParserTest {
         assertThat(details.osName()).isEqualTo("Linux (Ubuntu)");
         assertThat(details.osFamily()).isEqualTo(OperationSystem.LINUX);
         assertThat(details.deviceType()).isEqualTo("Komputer lub serwer");
-        assertThat(details.services()).containsExactly(
-                new DiscoveredService(22, "ssh", "OpenSSH", "9.6p1 Ubuntu 3ubuntu13.20", "Ubuntu Linux; protocol 2.0", null, null),
-                new DiscoveredService(80, "http", "Apache httpd", "2.4.58", "(Ubuntu)", "Apache2 Ubuntu Default Page", null));
+        DiscoveredService ssh = details.services().get(0);
+        assertThat(ssh.cpe()).containsExactly("cpe:/a:openbsd:openssh:9.6p1");
+        DiscoveredService http = details.services().get(1);
+        assertThat(http.title()).isEqualTo("Strona");
+        assertThat(http.scripts()).extracting("id").containsExactly("http-title", "http-headers");
+        assertThat(http.scripts().get(1).output()).isEqualTo("Server: Apache");
     }
 
     @Test
-    void shouldReadHostnameAndOsFromSmbDiscovery() {
+    void shouldReadHostnameMacAndOsFromHostScripts() {
         String xml = """
                 <nmaprun><host>
                   <ports><port protocol="tcp" portid="445"><state state="open"/><service name="microsoft-ds"/></port></ports>
                   <hostscript>
                     <script id="smb-os-discovery" output="&#xa;  OS: Windows 10 Pro 19045&#xa;  Computer name: DESKTOP-1&#xa;"/>
-                    <script id="nbstat" output="NetBIOS name: OTHER, NetBIOS user: &lt;unknown&gt;"/>
+                    <script id="nbstat" output="NetBIOS name: OTHER, NetBIOS user: &lt;unknown&gt;, NetBIOS MAC: aa:bb:cc:dd:ee:ff (x)"/>
                   </hostscript>
                 </host></nmaprun>
                 """;
@@ -57,7 +63,9 @@ class NmapDetailsParserTest {
         DeviceDetailsResponse details = parser.parse(IP, xml);
 
         assertThat(details.hostname()).isEqualTo("DESKTOP-1");
+        assertThat(details.macAddress()).isEqualTo("aa:bb:cc:dd:ee:ff");
         assertThat(details.osFamily()).isEqualTo(OperationSystem.WINDOWS);
+        assertThat(details.hostScripts()).extracting("id").containsExactly("smb-os-discovery", "nbstat");
     }
 
     @Test
@@ -87,12 +95,15 @@ class NmapDetailsParserTest {
     }
 
     @Test
-    void shouldLimitLongTitleFromDevice() {
-        String title = "x".repeat(500);
+    void shouldLimitLongTextFromDevice() {
         String xml = "<nmaprun><host><ports><port portid=\"80\"><state state=\"open\"/>"
-                + "<script id=\"http-title\"><elem key=\"title\">" + title + "</elem></script></port></ports></host></nmaprun>";
+                + "<script id=\"http-title\" output=\"" + "y".repeat(5000) + "\"><elem key=\"title\">" + "x".repeat(500)
+                + "</elem></script></port></ports></host></nmaprun>";
 
-        assertThat(parser.parse(IP, xml).services().get(0).title()).hasSize(200);
+        DiscoveredService service = parser.parse(IP, xml).services().get(0);
+
+        assertThat(service.title()).hasSize(200);
+        assertThat(service.scripts().get(0).output()).hasSize(2000);
     }
 
     @Test

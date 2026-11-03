@@ -20,24 +20,28 @@ public class NmapXmlParser {
                 .toList();
     }
 
-    public Map<String, List<Integer>> parseOpenPorts(String xml) {
-        Map<String, List<Integer>> openPorts = new LinkedHashMap<>();
+    public List<Integer> parseOpenPorts(String xml) {
+        return NmapXml.elements(NmapXml.parseRoot(xml), "port").stream()
+                .filter(NmapXmlParser::isOpen)
+                .map(port -> Integer.valueOf(port.getAttribute("portid")))
+                .sorted()
+                .toList();
+    }
+
+    public Map<String, String> parseHostnames(String xml) {
+        Map<String, String> names = new LinkedHashMap<>();
         for (Element host : NmapXml.elements(NmapXml.parseRoot(xml), "host")) {
-            address(host, "ipv4").ifPresent(ip -> openPorts.put(ip.getAttribute("addr"), openPortsOf(host)));
+            String name = hostname(host);
+            if (name != null) {
+                address(host, "ipv4").ifPresent(ip -> names.put(ip.getAttribute("addr"), name));
+            }
         }
-        return openPorts;
+        return names;
     }
 
     static boolean isOpen(Element port) {
         return NmapXml.elements(port, "state").stream()
                 .anyMatch(state -> "open".equals(state.getAttribute("state")));
-    }
-
-    private List<Integer> openPortsOf(Element host) {
-        return NmapXml.elements(host, "port").stream()
-                .filter(NmapXmlParser::isOpen)
-                .map(port -> Integer.valueOf(port.getAttribute("portid")))
-                .toList();
     }
 
     private boolean isUp(Element host) {
@@ -53,7 +57,8 @@ public class NmapXmlParser {
                 mac.map(element -> NmapXml.attribute(element, "addr")).orElse(null),
                 mac.map(element -> NmapXml.attribute(element, "vendor")).orElse(null),
                 false,
-                List.of()));
+                List.of(),
+                null));
     }
 
     private Optional<Element> address(Element host, String type) {

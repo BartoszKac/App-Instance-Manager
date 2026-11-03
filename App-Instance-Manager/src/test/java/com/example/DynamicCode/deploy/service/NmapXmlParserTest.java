@@ -32,10 +32,8 @@ class NmapXmlParserTest {
                 </nmaprun>
                 """;
 
-        List<DiscoveredDevice> devices = parser.parseLiveHosts(xml);
-
-        assertThat(devices).containsExactly(
-                new DiscoveredDevice("192.168.1.10", "pi.local", "AA:BB:CC:DD:EE:FF", "Raspberry Pi", false, List.of()));
+        assertThat(parser.parseLiveHosts(xml)).containsExactly(new DiscoveredDevice(
+                "192.168.1.10", "pi.local", "AA:BB:CC:DD:EE:FF", "Raspberry Pi", false, List.of(), null));
     }
 
     @Test
@@ -62,26 +60,38 @@ class NmapXmlParserTest {
     }
 
     @Test
-    void shouldReadOnlyOpenPorts() {
+    void shouldReadOnlyOpenPortsSorted() {
+        String xml = HEADER + """
+                <nmaprun><host>
+                  <address addr="192.168.1.20" addrtype="ipv4"/>
+                  <ports>
+                    <port protocol="tcp" portid="8080"><state state="open"/></port>
+                    <port protocol="tcp" portid="22"><state state="closed"/></port>
+                    <port protocol="tcp" portid="80"><state state="open"/></port>
+                    <port protocol="tcp" portid="443"><state state="filtered"/></port>
+                  </ports>
+                </host></nmaprun>
+                """;
+
+        assertThat(parser.parseOpenPorts(xml)).containsExactly(80, 8080);
+    }
+
+    @Test
+    void shouldReadHostnamesFromListScan() {
         String xml = HEADER + """
                 <nmaprun>
-                  <host>
-                    <address addr="192.168.1.20" addrtype="ipv4"/>
-                    <ports>
-                      <port protocol="tcp" portid="22"><state state="closed"/></port>
-                      <port protocol="tcp" portid="80"><state state="open"/></port>
-                      <port protocol="tcp" portid="443"><state state="filtered"/></port>
-                    </ports>
-                  </host>
+                  <host><status state="unknown"/><address addr="192.168.1.8" addrtype="ipv4"/>
+                    <hostnames><hostname name="Pixel-4a" type="PTR"/></hostnames></host>
+                  <host><status state="unknown"/><address addr="192.168.1.1" addrtype="ipv4"/><hostnames></hostnames></host>
                 </nmaprun>
                 """;
 
-        assertThat(parser.parseOpenPorts(xml)).containsEntry("192.168.1.20", List.of(80));
+        assertThat(parser.parseHostnames(xml)).containsOnlyKeys("192.168.1.8").containsEntry("192.168.1.8", "Pixel-4a");
     }
 
     @Test
     void shouldSetSshOpenWhenPortsContainSsh() {
-        DiscoveredDevice device = new DiscoveredDevice("192.168.1.1", null, null, null, false, List.of());
+        DiscoveredDevice device = new DiscoveredDevice("192.168.1.1", null, null, null, false, List.of(), null);
 
         assertThat(device.withOpenPorts(List.of(22, 80)).sshOpen()).isTrue();
         assertThat(device.withOpenPorts(List.of(80)).sshOpen()).isFalse();

@@ -1,5 +1,7 @@
 package com.example.DynamicCode.deploy.dto;
 
+import java.util.List;
+
 public record DiscoveredService(
         int port,
         String name,
@@ -7,5 +9,7 @@ public record DiscoveredService(
         String version,
         String extraInfo,
         String title,
-        String tlsSubject) {
+        String tlsSubject,
+        List<String> cpe,
+        List<ScriptResult> scripts) {
 }

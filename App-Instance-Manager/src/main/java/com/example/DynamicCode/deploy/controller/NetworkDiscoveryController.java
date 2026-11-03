@@ -3,7 +3,7 @@ package com.example.DynamicCode.deploy.controller;
 import com.example.DynamicCode.deploy.dto.DeviceDetailsRequest;
 import com.example.DynamicCode.deploy.dto.DeviceDetailsResponse;
 import com.example.DynamicCode.deploy.dto.NetworkScanRequest;
-import com.example.DynamicCode.deploy.dto.NetworkScanResponse;
+import com.example.DynamicCode.deploy.dto.ScanJobResponse;
 import com.example.DynamicCode.deploy.exception.InvalidScanTargetException;
 import com.example.DynamicCode.deploy.exception.InvalidSubnetException;
 import com.example.DynamicCode.deploy.exception.NetworkScanFailedException;
@@ -14,11 +14,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -38,8 +40,16 @@ public class NetworkDiscoveryController {
     }
 
     @PostMapping("/scan")
-    public NetworkScanResponse scan(@RequestBody NetworkScanRequest request) {
-        return networkScanService.scan(request.cidr());
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ScanJobResponse startScan(@RequestBody NetworkScanRequest request) {
+        return networkScanService.startScan(request.cidr());
+    }
+
+    @GetMapping("/scan/current")
+    public ResponseEntity<ScanJobResponse> currentScan() {
+        return networkScanService.currentScan()
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/device-details")

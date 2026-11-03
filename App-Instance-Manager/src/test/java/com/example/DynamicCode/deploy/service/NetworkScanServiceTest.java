@@ -2,37 +2,45 @@ package com.example.DynamicCode.deploy.service;
 
 import com.example.DynamicCode.deploy.dto.DeviceDetailsResponse;
 import com.example.DynamicCode.deploy.dto.DiscoveredDevice;
-import com.example.DynamicCode.deploy.dto.NetworkScanResponse;
+import com.example.DynamicCode.deploy.dto.DiscoveredService;
+import com.example.DynamicCode.deploy.dto.ScanJobResponse;
+import com.example.DynamicCode.deploy.enums.ScanState;
 import com.example.DynamicCode.deploy.exception.InvalidScanTargetException;
 import com.example.DynamicCode.deploy.exception.InvalidSubnetException;
 import com.example.DynamicCode.deploy.exception.NetworkScanFailedException;
 import com.example.DynamicCode.deploy.exception.NetworkScanInProgressException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class NetworkScanServiceTest {
 
-    private static final String CIDR = "192.168.1.0/24";
-    private static final DiscoveredDevice HIGH = new DiscoveredDevice("192.168.1.100", null, null, null, false, List.of());
-    private static final DiscoveredDevice LOW = new DiscoveredDevice("192.168.1.9", null, null, null, false, List.of());
+    private static final String CIDR = "192.168.1.0/28";
+    private static final String HOST = "192.168.1.5";
+    private static final DiscoveredDevice DEVICE = new DiscoveredDevice(HOST, null, null, null, false, List.of(), null);
+    private static final DiscoveredService SSH = new DiscoveredService(22, "ssh", null, null, null, null, null, List.of(), List.of());
 
     @Mock
     private NmapRunner nmapRunner;
@@ -44,123 +52,157 @@ class NetworkScanServiceTest {
     private NmapXmlParser nmapXmlParser;
 
     @Mock
-    private NmapDetailsParser nmapDetailsParser;
+    private DeviceInspector deviceInspector;
 
-    private NetworkScanService service() {
-        return new NetworkScanService(nmapRunner, localSubnetService, nmapXmlParser, nmapDetailsParser);
-    }
+    private NetworkScanService service;
 
-    @Test
-    void shouldSweepThenProbeOnlyLiveHostsAndSortThem() {
+    @BeforeEach
+    void setUp() {
+        service = new NetworkScanService(nmapRunner, localSubnetService, nmapXmlParser, deviceInspector);
         when(localSubnetService.listSubnets()).thenReturn(List.of(CIDR));
-        when(nmapRunner.run(eq(NmapCommands.sweep(CIDR)), any(Duration.class))).thenReturn("<sweep/>");
-        when(nmapXmlParser.parseLiveHosts("<sweep/>")).thenReturn(List.of(HIGH, LOW));
-        when(nmapRunner.run(eq(NmapCommands.openPorts(List.of(HIGH.ip(), LOW.ip()))), any(Duration.class))).thenReturn("<ports/>");
-        when(nmapXmlParser.parseOpenPorts("<ports/>")).thenReturn(Map.of(LOW.ip(), List.of(22)));
+    }
 
-        NetworkScanResponse response = service().scan(CIDR);
+    @AfterEach
+    void tearDown() {
+        service.shutdown();
+    }
 
-        assertThat(response.deviceCount()).isEqualTo(2);
-        assertThat(response.devices()).extracting(DiscoveredDevice::ip).containsExactly(LOW.ip(), HIGH.ip());
-        assertThat(response.devices().get(0).sshOpen()).isTrue();
-        assertThat(response.devices().get(1).openPorts()).isEmpty();
+    private ScanJobResponse awaitFinished() throws InterruptedException {
+        for (int attempt = 0; attempt < 200; attempt++) {
+            ScanJobResponse current = service.currentScan().orElseThrow();
+            if (current.state() != ScanState.RUNNING) {
+                return current;
+            }
+            Thread.sleep(20);
+        }
+        throw new AssertionError("Scan did not finish");
+    }
+
+    private Supplier<DeviceDetailsResponse> inspectionOf(DiscoveredService found) {
+        return () -> new DeviceDetailsResponse(HOST, null, null, null, null, null, List.of(found), List.of());
+    }
+
+    private void stubSuccessfulScan() {
+        when(nmapRunner.run(any(), any(Duration.class))).thenReturn("<x/>");
+        when(nmapXmlParser.parseLiveHosts(any())).thenReturn(List.of(DEVICE));
+        when(nmapXmlParser.parseOpenPorts(any())).thenReturn(List.of(22, 53));
+        when(nmapXmlParser.parseHostnames(any())).thenReturn(Map.of(HOST, "server"));
+        when(deviceInspector.inspections(HOST, List.of(22, 53))).thenReturn(List.of(inspectionOf(SSH)));
     }
 
     @Test
-    void shouldSkipPortScanWhenNoLiveHosts() {
-        when(localSubnetService.listSubnets()).thenReturn(List.of(CIDR));
-        when(nmapRunner.run(eq(NmapCommands.sweep(CIDR)), any(Duration.class))).thenReturn("<sweep/>");
-        when(nmapXmlParser.parseLiveHosts("<sweep/>")).thenReturn(List.of());
+    void shouldRunAllStagesInBackgroundAndFillDevice() throws Exception {
+        stubSuccessfulScan();
 
-        assertThat(service().scan(CIDR).deviceCount()).isZero();
+        ScanJobResponse started = service.startScan(CIDR);
+        ScanJobResponse finished = awaitFinished();
 
-        verify(nmapXmlParser, never()).parseOpenPorts(any());
+        assertThat(started.id()).isEqualTo(finished.id());
+        assertThat(finished.state()).isEqualTo(ScanState.DONE);
+        assertThat(finished.percent()).isEqualTo(100);
+        assertThat(finished.addressesScanned()).isEqualTo(14);
+        DiscoveredDevice device = finished.devices().get(0);
+        assertThat(device.hostname()).isEqualTo("server");
+        assertThat(device.sshOpen()).isTrue();
+        assertThat(device.deviceType()).isEqualTo("Router lub serwer DNS");
+        assertThat(finished.detailsTotal()).isEqualTo(1);
+        assertThat(finished.details().get(HOST).services()).containsExactly(SSH);
+        verify(nmapRunner).run(eq(NmapCommands.names(List.of(HOST), List.of(HOST))), any(Duration.class));
     }
 
     @Test
-    void shouldPassSweepTargetAsSingleArgument() {
-        assertThat(NmapCommands.sweep(CIDR)).endsWith(CIDR);
-        assertThat(NmapCommands.details("192.168.1.5")).endsWith("192.168.1.5");
-        assertThat(NmapCommands.openPorts(List.of("192.168.1.5", "192.168.1.6"))).endsWith("192.168.1.5", "192.168.1.6");
+    void shouldFinishWithFailedStateAndAllowNextScanWhenNmapIsMissing() throws Exception {
+        when(nmapRunner.run(any(), any(Duration.class))).thenThrow(new NetworkScanFailedException("brak nmap", null));
+
+        service.startScan(CIDR);
+        ScanJobResponse failed = awaitFinished();
+
+        assertThat(failed.state()).isEqualTo(ScanState.FAILED);
+        assertThat(failed.error()).isEqualTo("brak nmap");
+        assertThat(service.startScan(CIDR).state()).isEqualTo(ScanState.RUNNING);
     }
 
     @Test
-    void shouldRejectSubnetWithoutStartingProcessWhenItIsNotLocal() {
-        when(localSubnetService.listSubnets()).thenReturn(List.of(CIDR));
+    void shouldSkipNamesWhenNoDnsServerFound() throws Exception {
+        when(nmapRunner.run(any(), any(Duration.class))).thenReturn("<x/>");
+        when(nmapXmlParser.parseLiveHosts(any())).thenReturn(List.of(DEVICE));
+        when(nmapXmlParser.parseOpenPorts(any())).thenReturn(List.of());
+        when(deviceInspector.inspections(HOST, List.of())).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service().scan("8.8.8.0/24")).isInstanceOf(InvalidSubnetException.class);
+        service.startScan(CIDR);
+        ScanJobResponse finished = awaitFinished();
 
-        verifyNoInteractions(nmapRunner);
-    }
-
-    @Test
-    void shouldRejectArgumentInjectionWithoutStartingProcess() {
-        when(localSubnetService.listSubnets()).thenReturn(List.of(CIDR));
-
-        assertThatThrownBy(() -> service().scan("--script=evil.nse")).isInstanceOf(InvalidSubnetException.class);
-
-        verifyNoInteractions(nmapRunner);
-    }
-
-    @Test
-    void shouldRejectNullSubnet() {
-        when(localSubnetService.listSubnets()).thenReturn(List.of(CIDR));
-
-        assertThatThrownBy(() -> service().scan(null)).isInstanceOf(InvalidSubnetException.class);
-
-        verifyNoInteractions(nmapRunner);
-    }
-
-    @Test
-    void shouldAllowNextScanWhenPreviousFailed() {
-        NetworkScanService service = service();
-        when(localSubnetService.listSubnets()).thenReturn(List.of(CIDR));
-        when(nmapRunner.run(any(), any(Duration.class)))
-                .thenThrow(new NetworkScanFailedException("brak nmap", null))
-                .thenReturn("<sweep/>");
-        when(nmapXmlParser.parseLiveHosts("<sweep/>")).thenReturn(List.of());
-
-        assertThatThrownBy(() -> service.scan(CIDR)).isInstanceOf(NetworkScanFailedException.class);
-
-        assertThat(service.scan(CIDR).deviceCount()).isZero();
+        assertThat(finished.state()).isEqualTo(ScanState.DONE);
+        assertThat(finished.devices().get(0).openPorts()).isEmpty();
     }
 
     @Test
     void shouldRejectSecondScanWhileFirstIsRunning() throws Exception {
-        NetworkScanService service = service();
-        CountDownLatch started = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
-        when(localSubnetService.listSubnets()).thenReturn(List.of(CIDR));
         when(nmapRunner.run(any(), any(Duration.class))).thenAnswer(invocation -> {
-            started.countDown();
             release.await(5, TimeUnit.SECONDS);
-            return "<sweep/>";
+            return "<x/>";
         });
-        Thread first = new Thread(() -> service.scan(CIDR));
-        first.start();
-        assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+        when(nmapXmlParser.parseLiveHosts(any())).thenReturn(List.of());
+        service.startScan(CIDR);
 
-        assertThatThrownBy(() -> service.scan(CIDR)).isInstanceOf(NetworkScanInProgressException.class);
+        assertThatThrownBy(() -> service.startScan(CIDR)).isInstanceOf(NetworkScanInProgressException.class);
 
         release.countDown();
-        first.join(5000);
+        awaitFinished();
     }
 
     @Test
-    void shouldReturnDetailsWhenHostIsAllowed() {
-        DeviceDetailsResponse expected = new DeviceDetailsResponse("192.168.1.5", null, null, null, null, List.of());
-        when(localSubnetService.isAllowedHost("192.168.1.5")).thenReturn(true);
-        when(nmapRunner.run(eq(NmapCommands.details("192.168.1.5")), any(Duration.class))).thenReturn("<d/>");
-        when(nmapDetailsParser.parse("192.168.1.5", "<d/>")).thenReturn(expected);
+    void shouldReturnEmptyCurrentScanBeforeFirstRun() {
+        assertThat(service.currentScan()).isEmpty();
+    }
 
-        assertThat(service().details("192.168.1.5")).isEqualTo(expected);
+    @Test
+    void shouldRejectForeignSubnetAndArgumentInjectionWithoutStartingProcess() {
+        for (String target : new String[] {"8.8.8.0/24", "--script=evil.nse", null}) {
+            assertThatThrownBy(() -> service.startScan(target)).isInstanceOf(InvalidSubnetException.class);
+        }
+
+        verifyNoInteractions(nmapRunner);
+    }
+
+    @Test
+    void shouldPassEveryTargetAsSeparateArgument() {
+        assertThat(NmapCommands.sweep(List.of("192.168.1.1", "192.168.1.2"))).endsWith("192.168.1.1", "192.168.1.2");
+        assertThat(NmapCommands.openPorts(HOST)).endsWith(HOST);
+        assertThat(NmapCommands.portDetails(HOST, 80)).endsWith(HOST).contains("80");
+        assertThat(NmapCommands.hostDetails(HOST, 445)).endsWith(HOST).contains("445");
+        assertThat(NmapCommands.names(List.of(HOST), List.of("192.168.1.1"))).contains("192.168.1.1").endsWith(HOST);
+    }
+
+    @Test
+    void shouldMergeInspectionsAndClassifyWhenAskedForOneHost() {
+        when(localSubnetService.isAllowedHost(HOST)).thenReturn(true);
+        when(nmapRunner.run(any(), any(Duration.class))).thenReturn("<x/>");
+        when(nmapXmlParser.parseOpenPorts("<x/>")).thenReturn(List.of(22));
+        when(deviceInspector.inspections(HOST, List.of(22))).thenReturn(List.of(inspectionOf(SSH)));
+
+        DeviceDetailsResponse details = service.details(HOST);
+
+        assertThat(details.services()).containsExactly(SSH);
+        assertThat(details.deviceType()).isEqualTo("Komputer lub serwer");
+    }
+
+    @Test
+    void shouldReturnEmptyDetailsWhenHostHasNoOpenPorts() {
+        when(localSubnetService.isAllowedHost(HOST)).thenReturn(true);
+        when(nmapRunner.run(any(), any(Duration.class))).thenReturn("<x/>");
+        when(nmapXmlParser.parseOpenPorts("<x/>")).thenReturn(List.of());
+        when(deviceInspector.inspections(HOST, List.of())).thenReturn(List.of());
+
+        assertThat(service.details(HOST).services()).isEmpty();
     }
 
     @Test
     void shouldRejectDetailsWithoutStartingProcessWhenHostIsNotAllowed() {
         when(localSubnetService.isAllowedHost("8.8.8.8")).thenReturn(false);
 
-        assertThatThrownBy(() -> service().details("8.8.8.8")).isInstanceOf(InvalidScanTargetException.class);
+        assertThatThrownBy(() -> service.details("8.8.8.8")).isInstanceOf(InvalidScanTargetException.class);
 
         verifyNoInteractions(nmapRunner);
     }
