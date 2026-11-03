@@ -1,0 +1,57 @@
+package com.example.DynamicCode.deploy.controller;
+
+import com.example.DynamicCode.deploy.dto.NetworkScanRequest;
+import com.example.DynamicCode.deploy.dto.NetworkScanResponse;
+import com.example.DynamicCode.deploy.exception.InvalidSubnetException;
+import com.example.DynamicCode.deploy.exception.NetworkScanFailedException;
+import com.example.DynamicCode.deploy.exception.NetworkScanInProgressException;
+import com.example.DynamicCode.deploy.service.LocalSubnetService;
+import com.example.DynamicCode.deploy.service.NetworkScanService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/deploy/network")
+@RequiredArgsConstructor
+public class NetworkDiscoveryController {
+
+    private final LocalSubnetService localSubnetService;
+    private final NetworkScanService networkScanService;
+
+    @GetMapping("/subnets")
+    public List<String> listSubnets() {
+        return localSubnetService.listSubnets();
+    }
+
+    @PostMapping("/scan")
+    public NetworkScanResponse scan(@RequestBody NetworkScanRequest request) {
+        return networkScanService.scan(request.cidr());
+    }
+
+    @ExceptionHandler(InvalidSubnetException.class)
+    public ProblemDetail handleInvalidSubnet(InvalidSubnetException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(NetworkScanInProgressException.class)
+    public ProblemDetail handleScanInProgress(NetworkScanInProgressException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(NetworkScanFailedException.class)
+    public ProblemDetail handleScanFailed(NetworkScanFailedException e) {
+        log.warn("Network scan failed", e);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+    }
+}

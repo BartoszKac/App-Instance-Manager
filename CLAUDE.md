@@ -78,8 +78,15 @@ npm run lint
 
 Swagger UI (springdoc): `http://localhost:8888/swagger-ui.html`.
 
-Backend in Docker (JDK 17 + python3 + g++ inside, so Java/Python/C++/Bash projects compile and run
-in the container; port bound to `127.0.0.1:8888` only):
+LAN scan ("Skanuj sieć" on the Wysyłka screen) needs `nmap` on the backend host's `PATH` when run
+outside Docker (Windows: `winget install Insecure.Nmap`). See ADR-008, ADR-009.
+
+`Start.bat` starts Docker and `lan-helper/lan-helper.ps1`, the fast LAN scan on `localhost:8899`
+(ADR-010), and opens the UI. Without the helper the UI falls back to the slower nmap scan.
+
+Whole app in Docker: UI on `http://localhost:5173` (nginx), backend with JDK 17 + python3 + g++ + nmap
+on `127.0.0.1:8888`, so Java/Python/C++/Bash projects compile and run in the container. LAN scan
+target comes from `AIM_SCAN_SUBNETS` (default `192.168.1.0/24`):
 
 ```bash
 docker compose up -d --build     # build + start
@@ -89,8 +96,8 @@ docker compose down -v           # stop and DELETE volumes (H2 DB + saved projec
 ```
 
 Data lives in named volumes `aim-data` (`/opt/aim/data`, H2) and `aim-projects` (`/opt/aim/app`).
-The container runs as non-root user `runner`. The frontend dev server on the host works unchanged
-against `http://localhost:8888`.
+The backend container runs as non-root user `runner`. The frontend dev server on the host works
+unchanged against `http://localhost:8888` once the `frontend` container is stopped (same port 5173).
 
 Single jar with the frontend bundled into `static/` (needs no local Node — the plugin downloads it):
 

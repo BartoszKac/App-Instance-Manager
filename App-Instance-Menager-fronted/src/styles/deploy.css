@@ -60,6 +60,16 @@
 
 @keyframes blink { 50% { opacity: 0; } }
 
+.deploy-panel__actions { display: flex; gap: var(--space-1); }
+
+.scan-picker { display: flex; align-items: flex-end; gap: var(--space-2); }
+.scan-picker__field { flex: 1; min-width: 0; }
+.scan-summary { margin-top: var(--space-3); font-size: var(--fs-sm); color: var(--text-muted); }
+.scan-list { max-height: 260px; overflow-y: auto; margin-top: var(--space-2); }
+.scan-row__details { font-size: var(--fs-xs); color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scan-row__ssh { font-family: var(--mono); font-size: var(--fs-xs); color: var(--ok); padding-right: var(--space-2); }
+.scan-credentials { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-top: var(--space-3); }
+
 @media (max-width: 1100px) {
   .deploy { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
   .deploy-center { grid-column: 1 / -1; grid-row: 2; border-top: 1px solid var(--line); padding: var(--space-4); }

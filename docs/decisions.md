@@ -96,3 +96,70 @@ the pipeline rail.
 
 **Consequences.** ADR-006 structure, motion and icons are unchanged; only tokens, radii and the
 display face changed.
+
+## ADR-008 – LAN device discovery through nmap, local subnets only (02.11.2026)
+
+**Context.** The user wants to see how many devices are on a local network and add them as servers
+without typing each one. Offered a pure-Java probe or nmap, the user chose nmap for its accuracy
+(ARP, MAC, vendor), accepting that it must be installed on the backend host.
+
+**Decision.**
+- The backend runs the `nmap` binary from `PATH` and parses its XML output. nmap is an external
+  runtime requirement, not a Maven dependency.
+- The scan target is never free-form: the client's `cidr` must exactly match a subnet the backend
+  detected on its own network cards (private IPv4, `/24`–`/30`). This stops the unauthenticated API
+  from being used as a port scanner and rules out nmap argument injection. One scan runs at a time.
+- nmap is started by a new `LanguageProcess.captureOutput` (timeout, bounded output), so `deploy` may
+  import `code.service.LanguageProcess`.
+- `shared/config/CorsConfig` is the first `WebMvcConfigurer`. It covers only the new
+  `/api/deploy/network/**` paths and allows `http://localhost:5173` (working assumption of Q8).
+- Found devices are added through the existing `POST /api/deploy/server/bulk` with shared SSH
+  credentials and `operationSystem = LINUX`, the same fallback as single registration.
+
+**Consequences.** Without nmap the scan answers `503`. Accuracy depends on privileges: without raw
+socket access nmap cannot use ARP and finds fewer devices. A Docker container on the default bridge
+network cannot see the host's LAN. Passwords added in bulk are stored as plain text like every other
+server password (Q5).
+
+## ADR-009 – Whole app in Docker, LAN scan by TCP connect (02.11.2026) — refines ADR-008
+
+**Context.** The user wants to start everything from Docker with nothing else installed. ADR-008
+assumed a bridge container cannot see the host's LAN. Tested on Docker Desktop for Windows, that is
+wrong: outgoing connections reach the LAN. The container only cannot *detect* the LAN, because its
+own card is `172.17.0.0/16`. nmap's default discovery in the container missed a live host and
+reported the broadcast address as up. `-Pn -sT --open` over common ports found every host the default
+discovery did. Adding `--host-timeout` made nmap list about 100 hosts that had simply timed out as up
+with no ports, so it is not used.
+
+**Decision.**
+- nmap runs as `-Pn -sT -p <10 common ports> --open -T4 --max-retries 1`, with a 4 minute limit. A
+  device counts only when the parser sees an open port. This replaces the `-p 22` command of ADR-008
+  and works without raw sockets.
+- Allowed subnets are the detected ones plus `aim.network.scan-subnets` (env
+  `AIM_NETWORK_SCAN_SUBNETS`). Configured entries pass the same private `/24`–`/30` rule. The client
+  still cannot supply its own range.
+- `docker-compose.yml` sets that value from `AIM_SCAN_SUBNETS`, default `192.168.1.0/24`.
+- The frontend gets its own nginx container on `127.0.0.1:5173`, the origin CORS already allows.
+
+**Consequences.** A /24 takes about 2.5 minutes in the container, and repeated scans can differ by a
+device. A device with none of those ports open is not counted. Through Docker's NAT there
+are no MAC addresses or vendors and usually no hostnames. Another LAN needs `AIM_SCAN_SUBNETS` set
+before `docker compose up`.
+
+## ADR-010 – Fast LAN scan through a Windows helper (03.11.2026) — refines ADR-009
+
+**Context.** The user found the Docker scan too slow (about 2.5 minutes). From a container there is no
+ARP, so it also misses devices without an open common port. Offered a host script, a backend outside
+Docker or a faster Docker scan, the user chose the host script.
+
+**Decision.**
+- `lan-helper/lan-helper.ps1` runs on Windows with no installation: ping sweep, ARP table, TCP 22
+  probe, reverse DNS. `Start.bat` starts Docker and the helper.
+- It listens on `localhost:8899` only, serves only `GET /subnet` and `GET /scan`, takes no parameters
+  and scans only the private `/24`–`/30` network of the adapter with the default gateway. Requests
+  whose `Origin` is not `http://localhost:5173` get `403`.
+- The browser calls it directly. If it is unreachable, the UI warns and uses the nmap scan of ADR-009.
+
+**Consequences.** The helper must be started again after a reboot, through `Start.bat`. Windows-only.
+There is no automated test for the script. `Start.bat` uses `-ExecutionPolicy Bypass` for that one
+process only.

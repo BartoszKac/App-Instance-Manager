@@ -61,6 +61,12 @@ picks `SourceCode`/`CompiledCode`/`RemoteExecutable` upload strategy → SFTP vi
 `POST /api/deploy/program/execute` with `{command, programConfigId}` → `ExecutionService` runs the
 command over SSH and returns output as a string.
 
+**LAN discovery**
+`GET /api/deploy/network/subnets` → `LocalSubnetService` lists private subnets of the host's cards →
+`POST /api/deploy/network/scan` → `NetworkScanService` → `LanguageProcess.captureOutput` runs nmap →
+`NmapXmlParser` → devices shown in `NetworkScanModal` → chosen ones saved through
+`POST /api/deploy/server/bulk`.
+
 ## 5. Frontend structure
 
 Custom state router (`router/useRouter.ts`, screens: `projects`, `editor`, `deploy`, `execution`,
@@ -79,6 +85,8 @@ Each feature folder follows MVVM: `model/`, `viewmodel(s)/`, `views/`, `componen
 | Credentials | Passwords stored plain in H2, returned by `GET /api/deploy/servers`, also in `deploy-config.json` | Leak via API, DB file, git |
 | CORS / WS | `@CrossOrigin("*")` per controller, `setAllowedOriginPatterns("*")` on `/ws-console` | Any website the user visits can drive the API |
 | Auth | None | Anyone reaching port 8888 controls the app |
+| Network scan | `POST /api/deploy/network/scan` starts nmap on a subnet from the backend's own cards or server config only (ADR-008, ADR-009); 4 min timeout, one at a time, CORS limited to `localhost:5173` | Reveals devices on the LAN to anyone reaching port 8888; non-browser clients are not limited by CORS |
+| LAN helper | `lan-helper.ps1` on `localhost:8899`, no parameters, own private network only, `Origin` checked (ADR-010) | Any local process can ask it to sweep the LAN by sending that `Origin` header |
 | File names | Validated in `FileService` (`[A-Za-z0-9_-][A-Za-z0-9_.-]*`, resolved path must stay in the project folder); invalid → `400` | Mitigated for `POST /api/code/source`; legacy and upload endpoints not reviewed |
 
 ## 7. Known technical debt

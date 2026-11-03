@@ -43,6 +43,28 @@ Entities are returned directly unless stated otherwise — their JSON shape is t
 `RemoteSerwerConfiguration`: `{ IdConfiguration, name, ip, user, pass, operationSystem }`.
 `UploadStrategyType`, `OperationSystem`: see `constants/deploy/`.
 
+## Network discovery – `NetworkDiscoveryController` (`/api/deploy/network`)
+
+CORS allows only `http://localhost:5173` (`shared/config/CorsConfig`). Errors are `ProblemDetail`
+with a Polish `detail`.
+
+| Method | Path | Body / params | Response |
+|---|---|---|---|
+| GET | `/subnets` | – | `string[]` private IPv4 subnets, `/24`–`/30`, from the backend host's network cards and `aim.network.scan-subnets`, e.g. `["192.168.1.0/24"]` |
+| POST | `/scan` | `NetworkScanRequest { cidr }` (must be an exact value from `/subnets`) | `NetworkScanResponse`; `400` subnet not allowed, `409` a scan is already running, `503` nmap missing or failed |
+
+`NetworkScanResponse`: `{ cidr, deviceCount, devices: DiscoveredDevice[] }`.
+`DiscoveredDevice`: `{ ip, hostname|null, macAddress|null, vendor|null, sshOpen }`.
+
+## LAN helper – `lan-helper/lan-helper.ps1` (`http://localhost:8899`, not part of the backend)
+
+Runs on the Windows host (ADR-010). Requires `Origin: http://localhost:5173`, otherwise `403`.
+
+| Method | Path | Body / params | Response |
+|---|---|---|---|
+| GET | `/subnet` | – | `{ cidr }`; `503` when there is no private `/24`–`/30` network |
+| GET | `/scan` | – | `NetworkScanResponse` (`vendor` is always `null`); `503` as above, `500` when the scan fails |
+
 ## Process – `ProcessController` (`/api/process`)
 
 | Method | Path | Body / params | Response |
@@ -86,7 +108,10 @@ mapping. `test/CodeController` shares the `/api/code` prefix — check before ad
 | Frontend file | Endpoints used |
 |---|---|
 | `editor/api/CodeService.ts` | `/api/code/source/main-class/all`, `/source/main-class/{id}`, `/source`, `/compile/all/main-class/{id}`, `/compiled/main-class/{id}`, `/launch/main-class/{id}`, `/project/{id}` |
-| `deploy/viewmodel/useDeployViewModel.ts` | `/api/code/source/main-class/all`, `/api/process`, `/api/deploy/servers`, `/server`, `/server/{id}`, `/transfer/bulk` |
+| `deploy/viewmodel/useDeployViewModel.ts` | `/api/code/source/main-class/all`, `/api/process`, `/api/deploy/servers` |
+| `deploy/viewmodel/useServers.ts` | `/api/deploy/servers`, `/server`, `/server/{id}` |
+| `deploy/viewmodel/useDeployRun.ts` | `/api/deploy/transfer/bulk` |
+| `deploy/api/networkApi.ts` | `/api/deploy/network/subnets`, `/network/scan`, `/api/deploy/server/bulk`, LAN helper `/subnet`, `/scan` |
 | `execution/viewmodels/useExecutionViewModel.ts` | `/api/deploy/programs`, `/servers`, `/program/execute` |
 | `process/model/remoteExecutableRepository.ts` | `/api/process/**` |
 | `terminal/PackageTerminal.tsx` | `/ws-console`, `/topic/output` |

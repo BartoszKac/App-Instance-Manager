@@ -2,6 +2,7 @@ import { getServerId } from '../model/DeployState';
 import type { DeployServer } from '../model/DeployState';
 import type { DeployViewModel } from '../viewmodel/useDeployViewModel';
 import { AddServerModal } from './AddServerModal';
+import { NetworkScanModal } from './NetworkScanModal';
 import { Checkbox, Spinner } from '@/shared/ui/atoms';
 import { Icon } from '@/shared/ui/Icon';
 
@@ -32,7 +33,10 @@ export const ServersPanel = ({ vm }: { vm: DeployViewModel }) => (
   <aside className="deploy-panel deploy-panel--right" aria-label="Serwery docelowe">
     <div className="deploy-panel__head">
       <span className="deploy-panel__title">Serwery</span>
-      <button className="btn btn--quiet btn--sm" onClick={() => vm.setShowAddServer(true)}><Icon name="add" size={16} />Dodaj</button>
+      <div className="deploy-panel__actions">
+        <button className="btn btn--quiet btn--sm" onClick={vm.networkScan.open}><Icon name="search" size={16} />Skanuj sieć</button>
+        <button className="btn btn--quiet btn--sm" onClick={() => vm.setShowAddServer(true)}><Icon name="add" size={16} />Dodaj</button>
+      </div>
     </div>
     <div className="deploy-panel__body">
       {vm.loading && <p className="deploy-panel__loading"><Spinner />Wczytywanie serwerów…</p>}
@@ -45,5 +49,6 @@ export const ServersPanel = ({ vm }: { vm: DeployViewModel }) => (
       </ul>
     </div>
     {vm.showAddServer && <AddServerModal vm={vm} />}
+    {vm.networkScan.isOpen && <NetworkScanModal scan={vm.networkScan} />}
   </aside>
 );

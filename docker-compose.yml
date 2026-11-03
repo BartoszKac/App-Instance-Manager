@@ -7,9 +7,23 @@ services:
     # Bound to localhost only: the API compiles and runs arbitrary code and has no authentication.
     ports:
       - "127.0.0.1:8888:8888"
+    environment:
+      # A container sees only its own Docker network, so the LAN to scan is configured here.
+      AIM_NETWORK_SCAN_SUBNETS: ${AIM_SCAN_SUBNETS:-192.168.1.0/24}
     volumes:
       - aim-data:/opt/aim/data
       - aim-projects:/opt/aim/app
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./App-Instance-Menager-fronted
+    image: app-instance-manager-frontend:local
+    container_name: aim-frontend
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
