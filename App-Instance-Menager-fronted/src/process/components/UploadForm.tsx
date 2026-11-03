@@ -53,6 +53,6 @@ export const UploadForm = ({ vm, hasFolderList }: { vm: DirectUploadViewModel; h
     </label>
     <Pickers vm={vm} />
     <Actions vm={vm} />
-    <p className="direct-upload-form__hint">Pliki idą prosto na serwer, bez zapisu w aplikacji. Nie zamykaj tej karty, nie zmieniaj serwera ani ekranu, dopóki wysyłka trwa.</p>
+    <p className="direct-upload-form__hint">Pliki idą prosto na serwer, bez zapisu w aplikacji. Podczas wysyłki możesz przechodzić na inne ekrany. Nie zamykaj karty, nie odświeżaj jej i nie zmieniaj serwera na liście.</p>
   </div>
 );

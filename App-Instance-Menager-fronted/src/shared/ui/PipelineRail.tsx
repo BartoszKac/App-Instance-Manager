@@ -25,6 +25,7 @@ const STATIONS: Station[] = [
 interface PipelineRailProps {
   active: StationId;
   onSelect: (id: StationId) => void;
+  busyStation: StationId | null;
 }
 
 const useMarker = (wrapRef: React.RefObject<HTMLDivElement | null>, active: StationId) => {
@@ -44,7 +45,7 @@ const useMarker = (wrapRef: React.RefObject<HTMLDivElement | null>, active: Stat
   }, [wrapRef, active]);
 };
 
-export const PipelineRail = ({ active, onSelect }: PipelineRailProps) => {
+export const PipelineRail = ({ active, onSelect, busyStation }: PipelineRailProps) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   useMarker(wrapRef, active);
 
@@ -67,6 +68,7 @@ export const PipelineRail = ({ active, onSelect }: PipelineRailProps) => {
               >
                 <Icon name={s.icon} size={20} />
                 <span className="rail__label">{s.label}</span>
+                {s.id === busyStation && <span className="rail__busy" role="status" aria-label="Wysyłka trwa" title="Wysyłka trwa" />}
               </button>
             </li>
           ))}

@@ -201,3 +201,7 @@
 @media (max-width: 760px) {
   .rail::after { display: none; }
 }
+
+.shell__main[hidden] { display: none; }
+.rail__station { position: relative; }
+.rail__busy { position: absolute; top: 6px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 2px var(--surface); }

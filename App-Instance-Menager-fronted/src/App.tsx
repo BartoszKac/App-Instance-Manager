@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useRouter } from '@/router';
 import type { Screen } from '@/router';
 import { ProjectsView, EditorView } from '@/editor/views';
@@ -35,6 +36,14 @@ const App = () => {
   const { state, navigateTo } = useRouter();
   const toProjects = () => navigateTo('projects');
   const screenKey = state.screen === 'editor' ? `editor-${state.currentProject?.id}` : state.screen;
+  const isUploadVisible = state.screen === 'upload';
+  const [isUploadBusy, setIsUploadBusy] = useState(false);
+  const keepAlive = {
+    content: <UploadView isActive={isUploadVisible} onBusyChange={setIsUploadBusy} />,
+    isVisible: isUploadVisible,
+    isBusy: isUploadBusy,
+    station: 'upload' as const,
+  };
 
   return (
     <AppShell
@@ -42,6 +51,7 @@ const App = () => {
       screenKey={screenKey}
       onNavigate={(id) => navigateTo(SCREEN_OF[id])}
       console={<PackageTerminal />}
+      keepAlive={keepAlive}
     >
       {state.screen === 'projects' && <ProjectsView onOpenProject={(p) => navigateTo('editor', p)} />}
       {state.screen === 'editor' && state.currentProject && (
@@ -49,7 +59,6 @@ const App = () => {
       )}
       {state.screen === 'deploy' && <DeployView />}
       {state.screen === 'execution' && <ExecutionView />}
-      {state.screen === 'upload' && <UploadView />}
       {state.screen === 'services' && <ServicesView />}
       {state.screen === 'admin' && <AdminView />}
     </AppShell>

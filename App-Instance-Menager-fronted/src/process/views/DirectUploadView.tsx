@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { EmptyState, Notice } from '@/shared/ui/atoms';
 import type { InspectionStatus } from '@/shared/inspection/model';
 import { FolderPickerModal } from '../components/FolderPickerModal';
@@ -7,8 +8,17 @@ import { UploadProgress } from '../components/UploadProgress';
 import { useDirectUpload } from '../viewmodel/useDirectUpload';
 import { useUploadTargets } from '../viewmodel/useUploadTargets';
 
-const ServerPanel = ({ server }: { server: InspectionStatus }) => {
+interface DirectUploadViewProps {
+  isActive: boolean;
+  onBusyChange: (isBusy: boolean) => void;
+}
+
+const ServerPanel = ({ server, onBusyChange }: { server: InspectionStatus; onBusyChange: (isBusy: boolean) => void }) => {
   const vm = useDirectUpload(server.serverId);
+  useEffect(() => {
+    onBusyChange(vm.isSending);
+    return () => onBusyChange(false);
+  }, [vm.isSending, onBusyChange]);
   return (
     <>
       {vm.error && <Notice tone="error">{vm.error}</Notice>}
@@ -20,8 +30,8 @@ const ServerPanel = ({ server }: { server: InspectionStatus }) => {
   );
 };
 
-export const DirectUploadView = () => {
-  const targets = useUploadTargets();
+export const DirectUploadView = ({ isActive, onBusyChange }: DirectUploadViewProps) => {
+  const targets = useUploadTargets(isActive);
   if (!targets.isLoading && targets.servers.length === 0 && !targets.error) {
     return <EmptyState title="Brak serwerów" hint="Dodaj serwer na ekranie Wysyłka, a potem wróć tutaj." />;
   }
@@ -34,7 +44,7 @@ export const DirectUploadView = () => {
           {targets.servers.map((server) => <option key={server.serverId} value={server.serverId}>{server.name} ({server.user}@{server.ip})</option>)}
         </select>
       </label>
-      {targets.selected && <ServerPanel key={targets.selected.serverId} server={targets.selected} />}
+      {targets.selected && <ServerPanel key={targets.selected.serverId} server={targets.selected} onBusyChange={onBusyChange} />}
     </div>
   );
 };

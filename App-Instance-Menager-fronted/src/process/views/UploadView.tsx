@@ -15,7 +15,12 @@ const CONTEXT: Record<UploadMode, string> = {
   stored: 'Prześlij gotowy program lub skrypt, żeby wysłać go na serwery bez edytora.',
 };
 
-export const UploadView = () => {
+interface UploadViewProps {
+  isActive: boolean;
+  onBusyChange: (isBusy: boolean) => void;
+}
+
+export const UploadView = ({ isActive, onBusyChange }: UploadViewProps) => {
   const [mode, setMode] = useState<UploadMode>('direct');
   return (
     <>
@@ -24,7 +29,7 @@ export const UploadView = () => {
         <div className="segmented" role="group" aria-label="Dokąd wysłać">
           {MODES.map((m) => <button key={m.id} type="button" className="segmented__item" aria-pressed={mode === m.id} onClick={() => setMode(m.id)}>{m.label}</button>)}
         </div>
-        <div className="upload__mode" hidden={mode !== 'direct'}><DirectUploadView /></div>
+        <div className="upload__mode" hidden={mode !== 'direct'}><DirectUploadView isActive={isActive} onBusyChange={onBusyChange} /></div>
         {mode === 'stored' && <StoredUpload />}
       </div>
     </>

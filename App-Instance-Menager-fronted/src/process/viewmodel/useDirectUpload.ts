@@ -40,6 +40,13 @@ export const useDirectUpload = (serverId: number) => {
     };
   }, [reloadHistory]);
 
+  useEffect(() => {
+    if (!isSending) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isSending]);
+
   const choose = useCallback((files: FileList | null) => {
     setItems(Array.from(files ?? []).map(toItem));
   }, []);

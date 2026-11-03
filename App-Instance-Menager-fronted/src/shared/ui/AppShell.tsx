@@ -10,18 +10,20 @@ interface AppShellProps {
   onNavigate: (id: StationId) => void;
   console: ReactNode;
   children: ReactNode;
+  keepAlive: { content: ReactNode; isVisible: boolean; isBusy: boolean; station: StationId };
 }
 
-export const AppShell = ({ station, screenKey, onNavigate, console, children }: AppShellProps) => {
+export const AppShell = ({ station, screenKey, onNavigate, console, children, keepAlive }: AppShellProps) => {
   const mainRef = useRef<HTMLElement>(null);
   useScreenEnter(mainRef, screenKey);
 
   return (
     <div className="shell">
       <a className="skip-link" href="#main">Przejdź do treści</a>
-      <PipelineRail active={station} onSelect={onNavigate} />
+      <PipelineRail active={station} onSelect={onNavigate} busyStation={keepAlive.isBusy ? keepAlive.station : null} />
       <div className="shell__workspace">
-        <main id="main" className="shell__main" ref={mainRef} key={screenKey}>
+        <section id={keepAlive.isVisible ? 'main' : undefined} className="shell__main" hidden={!keepAlive.isVisible}>{keepAlive.content}</section>
+        <main id={keepAlive.isVisible ? undefined : 'main'} className="shell__main" hidden={keepAlive.isVisible} ref={mainRef} key={screenKey}>
           {children}
         </main>
         {console}
