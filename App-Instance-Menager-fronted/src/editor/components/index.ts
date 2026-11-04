@@ -1,9 +1,7 @@
-// src/editor/components/index.ts
 export * from './Sidebar';
 export * from './TabBar';
 export * from './NewProjectModal';
 export * from './CodeView';
-export * from './ProjectCard';
+export * from './ProjectRow';
 export * from './StatusBar';
-export * from './Topbar';
-export * from '../api/CodeService';
+export * from './BuildStrip';

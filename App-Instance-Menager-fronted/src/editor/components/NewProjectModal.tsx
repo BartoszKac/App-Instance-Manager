@@ -1,76 +1,58 @@
-// src/editor/components/NewProjectModal.tsx
-import React, { useState } from 'react';
-import { Language } from '@/editor/model';
+import { useState } from 'react';
+import type { Language } from '@/editor/model';
+import { Modal } from '@/shared/ui/Modal';
 
 interface NewProjectModalProps {
-  isOpen: boolean;
   onClose: () => void;
   onCreate: (name: string, desc: string, lang: Language) => void;
 }
 
-export const NewProjectModal: React.FC<NewProjectModalProps> = ({ isOpen, onClose, onCreate }) => {
+const LANGS: { value: Language; label: string }[] = [
+  { value: 'java', label: 'Java' },
+  { value: 'py', label: 'Python' },
+  { value: 'cpp', label: 'C++' },
+  { value: 'sh', label: 'Bash' },
+];
+
+export const NewProjectModal = ({ onClose, onCreate }: NewProjectModalProps) => {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [lang, setLang] = useState<Language>('java');
+  const canCreate = /^[A-Za-z0-9_-]+$/.test(name.trim());
 
-  if (!isOpen) return null;
-
-  const handleCreate = () => {
-    if (!name.trim()) return;
+  const create = () => {
+    if (!canCreate) return;
     onCreate(name.trim(), desc.trim(), lang);
-    setName('');
-    setDesc('');
-    setLang('java');
     onClose();
   };
 
   return (
-    <div className="modal-backdrop open">
-      <div className="modal">
-        <div className="modal-title">Nowy projekt</div>
-        <div className="modal-sub">Utwórz nową przestrzeń roboczą</div>
-
-        <div className="form-group">
-          <label className="form-label">Nazwa projektu</label>
-          <input
-            className="form-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="mój-projekt"
-            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-            autoFocus
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Opis (opcjonalnie)</label>
-          <input
-            className="form-input"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-            placeholder="Krótki opis projektu..."
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Język</label>
-          <select
-            className="form-select"
-            value={lang}
-            onChange={(e) => setLang(e.target.value as Language)}
-          >
-            <option value="java">Java</option>
-            <option value="py">Python</option>
-            <option value="cpp">C++</option>
-            <option value="sh">Bash</option>
-          </select>
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Anuluj</button>
-          <button className="btn-confirm" onClick={handleCreate}>Utwórz</button>
+    <Modal
+      title="Nowy projekt"
+      description="Projekt dostanie pierwszy plik o tej samej nazwie."
+      onClose={onClose}
+      footer={<>
+        <button className="btn btn--ghost" onClick={onClose}>Anuluj</button>
+        <button className="btn btn--primary" onClick={create} disabled={!canCreate}>Utwórz projekt</button>
+      </>}
+    >
+      <label className="field">
+        <span className="field__label">Nazwa</span>
+        <input className="input" value={name} autoFocus placeholder="Main" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && create()} />
+        <span className="field__hint">Litery, cyfry, „_” i „-”. Bez spacji.</span>
+      </label>
+      <label className="field">
+        <span className="field__label">Opis</span>
+        <input className="input" value={desc} placeholder="Opcjonalnie" onChange={(e) => setDesc(e.target.value)} />
+      </label>
+      <div className="field">
+        <span className="field__label" id="new-project-lang">Język</span>
+        <div className="segmented" role="group" aria-labelledby="new-project-lang">
+          {LANGS.map((l) => (
+            <button key={l.value} type="button" className="segmented__item" aria-pressed={lang === l.value} onClick={() => setLang(l.value)}>{l.label}</button>
+          ))}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

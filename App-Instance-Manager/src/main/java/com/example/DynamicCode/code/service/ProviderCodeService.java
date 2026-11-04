@@ -1,0 +1,108 @@
+package com.example.DynamicCode.code.service;
+
+import com.example.DynamicCode.code.service.CompiledCodeService;
+import com.example.DynamicCode.code.service.SourceCodeService;
+import com.example.DynamicCode.code.service.SourceFolderInTheDiskService;
+import com.example.DynamicCode.code.entity.CompiledCode;
+import com.example.DynamicCode.code.entity.SourceCode;
+import com.example.DynamicCode.code.entity.SourceFolderInTheDisk;
+import com.example.DynamicCode.code.service.CompilationService;
+import com.example.DynamicCode.code.service.AppLauncherService;
+import com.example.DynamicCode.code.service.SavingDataInSystemService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ProviderCodeService {
+
+    private final SourceCodeService sourceCodeService;
+    private final CompiledCodeService compiledCodeService;
+    private final SavingDataInSystemService savingDataInSystemService; // Wstrzykujemy Twój serwis dyskowy
+    private final CompilationService compilationService;
+    private final SourceFolderInTheDiskService sourceFolderInTheDiskService;
+    private final AppLauncherService appLauncherService;
+
+    // --- SEKCJA KODU ŹRÓDŁOWEGO (ZAPIS SYSTEMOWY I POBIERANIE) ---
+
+    /**
+     * Pobiera kody źródłowe z bazy (np. do załadowania w edytorze na front-endzie).
+     */
+    public List<SourceCode> getSourceCodesByMainClass(Long idMainClass) {
+        log.info("[Provider] Pobieranie kodu źródłowego z bazy dla idMainClass: {}", idMainClass);
+        return sourceCodeService.getAllFilesFromMainClass(idMainClass);
+    }
+
+    /**
+     * Uruchamia aplikację na podstawie głównej klasy (idMainClass).
+     * Pobiera potrzebne dane, generuje komendy i uruchamia proces.
+     * * @return Zwraca komunikat o sukcesie lub błędzie uruchomienia.
+     */
+    public String launchApp(Long idMainClass) {
+        log.info("[Provider] Wywołanie uruchomienia aplikacji dla idMainClass: {}", idMainClass);
+        return appLauncherService.launchApp(idMainClass);
+    }
+
+    /**
+     * Główna metoda zapisu kodu źródłowego przysyłanego z front-endu.
+     * Zapisuje pliki na dysku, generuje ścieżkę i rejestruje wszystko w bazie danych.
+     * * @return Zwraca unikalną ścieżkę na dysku (przydatne dla kompilatora).
+     */
+    public String saveSourceCodeInSystem(List<SourceCode> sourceCodes) {
+        log.info("[Provider] Wywołanie pełnego zapisu kodu źródłowego w systemie (Dysk + DB) dla {} plików.", sourceCodes.size());
+        return savingDataInSystemService.saveSourceCodeIntheSystem(sourceCodes);
+    }
+
+    /**
+     * Aktualizacja pojedynczego pliku źródłowego (gdy użytkownik kliknie "Zapisz" w edytorze).
+     */
+    public SourceCode updateSourceCode(SourceCode sourceCode) {
+        log.info("[Provider] Aktualizacja pliku źródłowego o ID: {}", sourceCode.getId());
+        return sourceCodeService.updateFile(sourceCode);
+    }
+
+    // --- SEKCJA KOMPILACJI (PROCESOWANIE I REZULTATY) ---
+
+
+    /**
+     * Pobiera skompilowane pliki z bazy (np. przed uruchomieniem aplikacji).
+     */
+    public List<CompiledCode> getCompiledCodesByMainClass(Long idMainClass) {
+        log.info("[Provider] Pobieranie skompilowanego kodu z bazy dla idMainClass: {}", idMainClass);
+        return compiledCodeService.getAllFilesFromMainClass(idMainClass);
+    }
+
+    // --- SEKCJA CZYSZCZENIA ---
+
+    /**
+     * Usuwa z bazy dane o projekcie (źródła i skompilowane).
+     * W przyszłości możesz tu też dodać usuwanie fizycznego folderu z dysku przez fileService!
+     */
+    public void deleteEntireProjectByMainClass(Long idMainClass) {
+        log.warn("[Provider] Kompleksowe usuwanie projektu z bazy dla idMainClass: {}", idMainClass);
+        compiledCodeService.deleteAllFilesByMainClass(idMainClass);
+        sourceCodeService.deleteAllFilesByMainClass(idMainClass);
+    }
+    public List<SourceCode> getAllSourceCodes() {
+        log.info("[Provider] Pobieranie wszystkich kodów źródłowych z bazy.");
+        return sourceCodeService.getAllFilesFromMainClass();
+    }
+    public List<SourceCode> getAllMainClassSourceCodes() {
+        log.info("[Provider] Pobieranie kodów źródłowych dla wszystkich głównych klas z bazy.");
+        return sourceCodeService.getAllMainClassesFromDb();
+    }
+    public String compileAllFilesFromMainClass(Long idMainClass) {
+        log.info("[Provider] Wywołanie kompilacji dla idMainClass: {}", idMainClass);
+        compilationService.compileAllFilesFromMainClass(idMainClass);
+        return "Kompilacja uruchomiona dla idMainClass: " + idMainClass;
+    }
+
+    public List<SourceFolderInTheDisk> getAllSourceFolders() {
+        log.info("[Provider] Pobieranie wszystkich folderów źródłowych z bazy.");
+        return sourceFolderInTheDiskService.getAllFolders();
+    }
+}

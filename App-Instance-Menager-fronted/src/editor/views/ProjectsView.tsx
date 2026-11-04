@@ -1,115 +1,70 @@
-// src/editor/views/ProjectsView.tsx
-import React, { useState } from 'react';
-import { Project, Language } from '@/editor/model';
+import { useState } from 'react';
+import type { Project, Language } from '@/editor/model';
 import { useProjects } from '@/editor/viewmodels';
-import { ProjectCard, NewProjectModal, Topbar } from '@/editor/components';
+import { ProjectRow, NewProjectModal } from '@/editor/components';
+import { ScreenHeader } from '@/shared/ui/ScreenHeader';
+import { Icon } from '@/shared/ui/Icon';
+import { EmptyState, Notice, Spinner } from '@/shared/ui/atoms';
 
 interface ProjectsViewProps {
   onOpenProject: (project: Project) => void;
-  onDeploy: () => void;
-  onExecution: () => void;
-  onUpload: () => void;
 }
 
-export const ProjectsView: React.FC<ProjectsViewProps> = ({
-  onOpenProject,
-  onDeploy,
-  onExecution,
-  onUpload,
-}) => {
+const FILTERS: { label: string; value: Language | 'all' }[] = [
+  { label: 'Wszystkie', value: 'all' },
+  { label: 'Java', value: 'java' },
+  { label: 'Python', value: 'py' },
+  { label: 'C++', value: 'cpp' },
+  { label: 'Bash', value: 'sh' },
+];
+
+const countLabel = (n: number) => (n === 1 ? '1 projekt' : n % 10 >= 2 && n % 10 <= 4 && (n < 10 || n > 20) ? `${n} projekty` : `${n} projektów`);
+
+export const ProjectsView = ({ onOpenProject }: ProjectsViewProps) => {
   const { filteredProjects, state, setFilter, setSearchQuery, createProject, loading, error } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleCreate = (name: string, desc: string, lang: Language) => {
-    const project = createProject(name, desc, lang);
-    onOpenProject(project);
-  };
-
-  const filters: { label: string; value: Language | 'all' }[] = [
-    { label: 'Wszystkie', value: 'all' },
-    { label: 'Java',      value: 'java' },
-    { label: 'Python',    value: 'py' },
-    { label: 'C++',       value: 'cpp' },
-    { label: 'Bash',      value: 'sh' },
-  ];
+  const openModal = () => setIsModalOpen(true);
 
   return (
-    <div className="screen-projects">
-      <Topbar
-        left={
-          <div className="nav-header" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div className="nav-tabs">
-              <button className="nav-tab active">Projekty</button>
-              <button className="nav-tab" onClick={onDeploy}>Deploy</button>
-              <button className="nav-tab" onClick={onExecution}>Instancje</button>
-              <button className="nav-tab" onClick={onUpload}>Prześlij plik</button>
-            </div>
-            <div className="breadcrumb">
-              <span className="breadcrumb-sep">/</span>
-              <span className="breadcrumb-cur">wszystkie-projekty</span>
-            </div>
-          </div>
-        }
-        right={
-          <button className="nav-btn primary" onClick={() => setIsModalOpen(true)}>
-            + Nowy projekt
-          </button>
-        }
+    <>
+      <ScreenHeader
+        title="Projekty"
+        context={loading ? 'Wczytywanie projektów z serwera…' : `${countLabel(state.projects.length)} na serwerze`}
+        actions={<button className="btn btn--primary" onClick={openModal}><Icon name="add" />Nowy projekt</button>}
       />
-
-      <div className="projects-header">
-        <h1 className="projects-title">Projekty</h1>
-        <p className="projects-sub">Twoje przestrzenie robocze</p>
-      </div>
-
-      <div className="projects-toolbar">
-        <div className="search-box">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-          </svg>
-          <input placeholder="Szukaj projektu..." onChange={(e) => setSearchQuery(e.target.value)} />
+      <div className="projects" data-enter="body">
+        <div className="projects__toolbar">
+          <label className="search">
+            <Icon name="search" size={16} />
+            <span className="visually-hidden">Szukaj projektu</span>
+            <input type="search" placeholder="Szukaj po nazwie lub opisie" onChange={(e) => setSearchQuery(e.target.value)} />
+          </label>
+          <div className="segmented" role="group" aria-label="Filtruj po języku">
+            {FILTERS.map((f) => (
+              <button key={f.value} className="segmented__item" aria-pressed={state.filter === f.value} onClick={() => setFilter(f.value)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-
-        <div className="filter-tabs">
-          {filters.map((f) => (
-            <button
-              key={f.value}
-              className={`filter-tab ${state.filter === f.value ? 'active' : ''}`}
-              onClick={() => setFilter(f.value)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        <button className="btn-new" onClick={() => setIsModalOpen(true)}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Nowy projekt
-        </button>
-      </div>
-
-      {loading && <div className="loading-indicator">Ładowanie...</div>}
-      {error   && <div className="error-message">Błąd: {error}</div>}
-
-      <div className="projects-grid">
-        {filteredProjects.length === 0 ? (
-          <div className="empty-state">Brak projektów. Utwórz nowy projekt.</div>
-        ) : (
-          filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} onClick={onOpenProject} />
-          ))
+        {error && <div className="projects__notice"><Notice tone="error">Nie udało się wczytać projektów: {error}. Sprawdź, czy backend działa na porcie 8888.</Notice></div>}
+        {loading && <div className="projects__loading"><Spinner />Wczytywanie…</div>}
+        {!loading && filteredProjects.length === 0 && (
+          <EmptyState
+            title={state.projects.length ? 'Nic nie pasuje do filtra' : 'Nie masz jeszcze projektów'}
+            hint={state.projects.length ? 'Zmień wyszukiwanie albo język.' : 'Utwórz projekt, napisz kod i uruchom go jednym kliknięciem.'}
+            action={!state.projects.length && <button className="btn btn--primary" onClick={openModal}>Utwórz pierwszy projekt</button>}
+          />
+        )}
+        {filteredProjects.length > 0 && (
+          <ul className="project-list">
+            {filteredProjects.map((p) => <ProjectRow key={p.id} project={p} onOpen={onOpenProject} />)}
+          </ul>
         )}
       </div>
-
-      <NewProjectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onCreate={handleCreate}
-      />
-    </div>
+      {isModalOpen && (
+        <NewProjectModal onClose={() => setIsModalOpen(false)} onCreate={(name, desc, lang) => onOpenProject(createProject(name, desc, lang))} />
+      )}
+    </>
   );
 };

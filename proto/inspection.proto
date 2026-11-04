@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package aim.inspection.v1;
+
+option java_multiple_files = true;
+option java_package = "com.example.inspection.grpc.v1";
+option java_outer_classname = "InspectionProto";
+
+service ServerInspection {
+  rpc Inspect(InspectRequest) returns (stream InspectEvent);
+}
+
+service ServerFileTransfer {
+  rpc Upload(stream UploadChunk) returns (stream UploadEvent);
+}
+
+message UploadChunk {
+  oneof part {
+    UploadHeader header = 1;
+    bytes data = 2;
+  }
+}
+
+message UploadHeader {
+  string host = 1;
+  string user = 2;
+  string password = 3;
+  string pinned_host_key = 4;
+  string destination_dir = 5;
+  string relative_path = 6;
+  bool overwrite = 7;
+  int64 expected_size = 8;
+}
+
+message UploadEvent {
+  oneof event {
+    UploadAccepted accepted = 1;
+    UploadResult result = 2;
+  }
+}
+
+message UploadAccepted {
+  string host_key = 1;
+}
+
+message UploadResult {
+  string remote_path = 1;
+  int64 size_bytes = 2;
+  string sha256 = 3;
+}
+
+enum TargetPlatform {
+  TARGET_PLATFORM_UNSPECIFIED = 0;
+  TARGET_PLATFORM_POSIX = 1;
+  TARGET_PLATFORM_WINDOWS = 2;
+}
+
+enum InspectionStage {
+  INSPECTION_STAGE_UNSPECIFIED = 0;
+  INSPECTION_STAGE_CONNECTING = 1;
+  INSPECTION_STAGE_FACTS = 2;
+  INSPECTION_STAGE_FILES = 3;
+}
+
+message InspectRequest {
+  string host = 1;
+  string user = 2;
+  string password = 3;
+  string pinned_host_key = 4;
+  TargetPlatform preferred_platform = 5;
+}
+
+message InspectEvent {
+  oneof event {
+    StageChanged stage = 1;
+    Section section = 2;
+    FileBatch files = 3;
+    Completed completed = 4;
+  }
+}
+
+message StageChanged {
+  InspectionStage stage = 1;
+}
+
+message Section {
+  string key = 1;
+  string label = 2;
+  string category = 3;
+  string value = 4;
+}
+
+message FileEntry {
+  string path = 1;
+  string parent = 2;
+  string name = 3;
+  string type = 4;
+  int64 size_bytes = 5;
+  string owner = 6;
+  string owner_group = 7;
+  string mode = 8;
+  int64 modified_epoch_seconds = 9;
+}
+
+message FileBatch {
+  repeated FileEntry entries = 1;
+}
+
+message Completed {
+  string host_key = 1;
+  TargetPlatform platform = 2;
+  bool truncated = 3;
+  repeated string denied_paths = 4;
+}

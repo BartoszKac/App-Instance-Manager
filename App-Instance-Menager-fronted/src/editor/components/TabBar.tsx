@@ -1,6 +1,6 @@
-// src/editor/components/TabBar.tsx
-import React from 'react';
-import { ProjectFile } from '@/editor/model';
+import type { ProjectFile } from '@/editor/model';
+import { Icon } from '@/shared/ui/Icon';
+import { langClass } from '@/shared/lang';
 
 interface TabBarProps {
   tabs: ProjectFile[];
@@ -9,37 +9,21 @@ interface TabBarProps {
   onTabClose: (fileName: string) => void;
 }
 
-export const TabBar: React.FC<TabBarProps> = ({
-  tabs,
-  activeFile,
-  onTabClick,
-  onTabClose,
-}) => {
-  return (
-    <div className="editor-tabs">
-      {tabs.map((file) => (
-        <div
-          key={file.name}
-          className={`tab ${activeFile?.name === file.name ? 'active' : ''}`}
-          onClick={() => onTabClick(file)}
-        >
-          <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--text3)' }}>
-            .{file.ext}
-          </span>
-          {file.name}
-          <span
-            className="tab-close"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTabClose(file.name);
-            }}
-          >
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </span>
+export const TabBar = ({ tabs, activeFile, onTabClick, onTabClose }: TabBarProps) => (
+  <div className="tabs" role="tablist" aria-label="Otwarte pliki">
+    {tabs.map((file) => {
+      const active = activeFile?.name === file.name;
+      return (
+        <div key={file.name} className={`tab ${langClass(file.ext)}`} data-active={active}>
+          <button className="tab__label" role="tab" aria-selected={active} onClick={() => onTabClick(file)}>
+            <span className="tab__swatch" aria-hidden="true" />
+            {file.name}
+          </button>
+          <button className="tab__close" onClick={() => onTabClose(file.name)} aria-label={`Zamknij ${file.name}`}>
+            <Icon name="close" size={14} />
+          </button>
         </div>
-      ))}
-    </div>
-  );
-};
+      );
+    })}
+  </div>
+);
