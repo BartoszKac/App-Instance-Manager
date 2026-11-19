@@ -14,6 +14,8 @@
 .instance__head { display: flex; align-items: center; gap: var(--space-3); }
 .instance__server { font-family: var(--display); font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.02em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .instance__path { margin: 4px 0 var(--space-3) 20px; font-family: var(--mono); font-size: 12px; color: var(--text-muted); word-break: break-all; }
+.instance__file { font-weight: 600; color: var(--text); }
+.instance__missing { font-family: var(--font); color: var(--warn); }
 
 .prompt { display: flex; align-items: center; gap: var(--space-2); height: 46px; padding: 0 6px 0 18px; border-radius: var(--radius-pill); border: 1px solid var(--line); transition: border-color 0.15s, box-shadow 0.15s; }
 .prompt:focus-within { border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-wash); }

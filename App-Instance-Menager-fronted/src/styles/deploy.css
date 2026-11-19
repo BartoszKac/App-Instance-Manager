@@ -34,6 +34,15 @@
 
 .pick-row__select { height: 26px; max-width: 120px; padding: 0 4px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text-muted); font-size: 12px; }
 .pick-row__select:hover { border-color: var(--line-strong); color: var(--text); }
+.pick-row--file { align-items: flex-start; }
+.pick-row--file .pick-row__label { align-items: flex-start; }
+.pick-row--file .pick-row__label > .checkbox, .pick-row--file .pick-row__swatch { margin-top: 13px; }
+.pick-row--file .pick-row__select, .pick-row--file .pick-row__fixed { margin-top: 8px; }
+.pick-row__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 8px 0; }
+.pick-row__meta { font-size: var(--fs-xs); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; }
+.pick-row__note { font-size: var(--fs-xs); color: var(--warn); }
+.pick-row__hint { font-family: var(--mono); font-size: 11px; color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-row__fixed { flex-shrink: 0; padding: 0 6px; font-size: 12px; color: var(--text-muted); }
 
 .deploy-center { overflow-y: auto; padding: var(--space-5) var(--space-6); min-width: 0; }
 .deploy-center--empty { display: flex; align-items: center; justify-content: center; }

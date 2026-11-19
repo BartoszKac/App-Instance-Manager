@@ -294,3 +294,38 @@ free. This path is not asynchronous inside the backend, unlike inspections. One 
 files slow. Measured: 300 MB in 26 s between local containers. An upload may be cut after about 33 minutes,
 through the connection age limit of ADR-014, and can then be sent again. Overwriting removes the old file just before the
 rename, so a failure between the two steps loses it. Empty folders are not sent. Windows SFTP targets were not tested.
+
+## ADR-016 – Deploy reads file metadata through projection records of `code` and `process` (06.11.2026)
+
+**Context.** Screen Wysyłka needs to say what each file is (task 10). Reading `RemoteExecutable` and `CompiledCode`
+entities would load every blob into memory and count compiled files with N+1 queries.
+
+**Decision.**
+- `remote_executable` gets three nullable columns, approved by the user on 05.11.2026: `description` (≤ 200 characters),
+  `size_bytes`, `uploaded_at`. The server sets size and time on every save; client values are ignored.
+- `process.dto.RemoteExecutableSummary` is read with a JPQL constructor projection and `code.dto.CompiledFileCount` with one
+  `group by idManClass` query. Both are exposed by the owner's service (`RemoteExecutableService.getSummaries`,
+  `CompiledCodeService.countFilesPerProject`).
+- `deploy` may import these two records. `GET /api/deploy/deployable-files` maps them into its own
+  `DeployableFilesResponse` without file contents.
+- The run hint shown per file is a frontend lookup on language, strategy and extension; the backend knows nothing about it.
+
+**Consequences.** Existing uploads show only name and language. `compiledFileCount` counts rows with non-null bytes; a
+`CompiledCode` row stored with an empty array (missing class after compilation) still counts.
+
+## ADR-017 – Execute permission is a preset the user chooses (06.11.2026)
+
+**Context.** No active code sets the execute bit after a transfer, so an uploaded binary cannot be run from screen Uruchom
+(task 11). Offered automatic `chmod` after sending or a button, the user chose the button on 05.11.2026.
+
+**Decision.**
+- Screen Uruchom gets presets `Nadaj prawo uruchamiania` (`chmod +x -- '<file>'`) and `Uruchom plik` (`./'<file>'`, uploads
+  only) in group System, hidden for servers with `operationSystem = WINDOWS`. A click only fills the prompt; nothing runs
+  until the user presses Uruchom.
+- The file of a card comes from `idCode` + `uploadStrategyType` looked up in `GET /api/deploy/deployable-files`. A card
+  whose file is gone says so and hides every preset that needs a file.
+- Every preset that contains a file name single-quotes it (`shared/shellQuote.ts`), because `ExecutionService` runs
+  `cd <path> && <command>` in a remote shell and rows saved before task 09 can hold any name.
+
+**Consequences.** `program/execute` still answers `200` with `BŁĄD WYKONANIA: …` on failure, so a failed `chmod` shows
+only in the output. `base()` in presets strips one extension, so `app.tar.gz` becomes `app.tar`.

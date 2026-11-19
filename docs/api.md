@@ -34,11 +34,26 @@ Entities are returned directly unless stated otherwise — their JSON shape is t
 | POST | `/server/bulk` | `RemoteSerwerConfiguration[]` | `200` |
 | GET | `/server/{idConfiguration}` | – | config |
 | DELETE | `/server/{idConfiguration}` | – | `204` |
-| GET | `/program/{mainClassId}` | – | `RemoteProgramConfiguration` |
+| GET | `/deployable-files` | – | `DeployableFilesResponse` (no file contents) |
+| GET | `/program/{idConfiguration}` | – | `RemoteProgramConfiguration` (looked up by its own id, not by `idCode`) |
 | GET | `/programs` | – | `RemoteProgramConfiguration[]` |
 | POST | `/program/execute` | `ExecuteDto { command, programConfigId }` | string (remote output) |
-| POST | `/transfer/bulk` | `TransferTask[] { mainClassId, configurationId, uploadStrategyType }` | `200` |
-| POST | `/transfer/single` | query `mainClassId`, `idConfiguration`, `strategy` | `200` |
+| POST | `/transfer/bulk` | `TransferTask[] { mainClassId, configurationId, uploadStrategyType }` | `200` `TransferResult[]`, one per task, same order as the request |
+| POST | `/transfer/single` | query `mainClassId`, `idConfiguration`, `strategy` | `200`; a failure surfaces as a `500` |
+
+`TransferTask.mainClassId` is a project's `idManClass` for `SOURCE_CODE` / `COMPILED_CODE` and a `RemoteExecutable.id`
+for `REMOTE_EXECUTABLE`. The frontend offers `REMOTE_EXECUTABLE` only for uploaded files and `SOURCE_CODE` /
+`COMPILED_CODE` only for projects.
+
+`TransferResult`: `{ mainClassId, configurationId, success, message }`. A bulk request answers `200` even when some tasks
+fail; each failed task has `success: false` and a fixed Polish `message` chosen by failure type (no files, unsafe file name,
+SSH connection, SFTP write, unknown server or file, anything else). The message never contains exception text, hosts or
+paths. A `RemoteProgramConfiguration` (a card on screen Uruchom) is saved only after a successful upload.
+
+`DeployableFilesResponse`:
+`{ projects: [{ mainClassId, name, language, compiledFileCount }], uploads: [{ id, name, language, description|null, sizeBytes|null, uploadedAt|null }] }`.
+`compiledFileCount` counts `CompiledCode` rows with non-null bytes. `uploadedAt` is an ISO-8601 instant. Uploads made before
+task 10 have `null` in the three metadata fields.
 
 `RemoteSerwerConfiguration`: `{ IdConfiguration, name, ip, user, pass, operationSystem }`.
 `UploadStrategyType`, `OperationSystem`: see `constants/deploy/`.
@@ -126,13 +141,18 @@ CORS as above. Errors are `ProblemDetail` with a Polish `detail`.
 
 | Method | Path | Body / params | Response |
 |---|---|---|---|
-| POST | `/upload` | multipart `file` + query `language` | `201` string |
-| POST | `/bulk` | `RemoteExecutable[]` | string |
-| GET | `` | – | `RemoteExecutable[]` |
+| POST | `/upload` | multipart `file` + query `language`, optional `description` (≤ 200 characters) | `201` string; `400` `ProblemDetail` for an unsafe file name or a longer description |
+| POST | `/bulk` | `RemoteExecutable[]` | string; `400` as above |
+| GET | `` | – | `RemoteExecutable[]` (entity, includes `contents`) |
 | GET | `/{id}` | – | `RemoteExecutable[]` (list, not single — known quirk) |
-| PUT | `/{id}` | `RemoteExecutable` | string |
+| PUT | `/{id}` | `RemoteExecutable` | string; `400` as above. The path id wins over the body id |
 | DELETE | `/{id}` | – | `204` |
 | DELETE | `` | – | string |
+
+`RemoteExecutable`: `{ id, name, contents, language, description, sizeBytes, uploadedAt }`. `sizeBytes` and `uploadedAt` are
+set by the server on every save: the size from `contents`, the time on creation (kept on update). Values sent by the client
+are ignored. File name rule (all three write paths): not null or blank, not `.` or `..`, no `/`, `\` or control characters,
+no leading `-`. Spaces and Polish letters are allowed.
 
 ## WebSocket
 
@@ -165,15 +185,15 @@ mapping. `test/CodeController` shares the `/api/code` prefix — check before ad
 | Frontend file | Endpoints used |
 |---|---|
 | `editor/api/CodeService.ts` | `/api/code/source/main-class/all`, `/source/main-class/{id}`, `/source`, `/compile/all/main-class/{id}`, `/compiled/main-class/{id}`, `/launch/main-class/{id}`, `/project/{id}` |
-| `deploy/viewmodel/useDeployViewModel.ts` | `/api/code/source/main-class/all`, `/api/process`, `/api/deploy/servers` |
+| `deploy/api/deployApi.ts` | `/api/deploy/servers`, `/api/deploy/transfer/bulk` |
+| `shared/deployable/deployableFilesApi.ts` | `/api/deploy/deployable-files` (screens Wysyłka and Uruchom) |
 | `deploy/viewmodel/useServers.ts` | `/api/deploy/servers`, `/server`, `/server/{id}` |
-| `deploy/viewmodel/useDeployRun.ts` | `/api/deploy/transfer/bulk` |
 | `shared/network/networkApi.ts` | `/api/deploy/network/subnets`, `/network/scan`, `/network/scan/current`, `/network/device-details` |
 | `deploy/api/serversApi.ts` | `/api/deploy/server/bulk`, `/api/deploy/server-inventory/{id}` |
 | `services/api/servicesApi.ts` | `/api/services`, `/api/services/{id}` |
 | `admin/api/inspectionApi.ts` | `/api/inspections/servers`, `/servers/{id}`, `/servers/{id}/files`, `/servers/{id}/files/search`, `/servers/{id}/host-key`, `/api/deploy/server-credentials/{id}` |
 | `process/api/transferApi.ts` | `/api/transfers/servers/{id}/files` |
 | `shared/inspection/inspectionFilesApi.ts` | `/api/inspections/servers`, `/servers/{id}/files` (also the folder picker of screen Plik) |
-| `execution/viewmodels/useExecutionViewModel.ts` | `/api/deploy/programs`, `/servers`, `/program/execute` |
-| `process/model/remoteExecutableRepository.ts` | `/api/process/**` |
+| `execution/api/executionApi.ts` | `/api/deploy/programs`, `/api/deploy/servers`, `/api/deploy/program/execute` (plus `/api/deploy/deployable-files` through `shared/deployable`) |
+| `process/api/remoteExecutableApi.ts` | `/api/process/upload` |
 | `terminal/PackageTerminal.tsx` | `/ws-console`, `/topic/output` |

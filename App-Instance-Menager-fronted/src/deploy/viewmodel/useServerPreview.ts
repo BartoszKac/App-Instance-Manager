@@ -3,7 +3,7 @@ import { errorMessage } from '@/shared/errorMessage';
 import { fetchDeviceDetails } from '@/shared/network/networkApi';
 import type { DeviceDetails } from '@/shared/network/model';
 import { fetchServerInventory } from '../api/serversApi';
-import { getServerId } from '../model/DeployState';
+import { getServerId } from './deployRules';
 import type { DeployServer } from '../model/DeployState';
 import type { ServerInventory } from '../model/ServerInventory';
 

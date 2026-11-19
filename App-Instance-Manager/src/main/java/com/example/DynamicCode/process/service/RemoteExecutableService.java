@@ -1,8 +1,9 @@
 package com.example.DynamicCode.process.service;
 
-import com.example.DynamicCode.shared.persistence.DataBaseProvider;
+import com.example.DynamicCode.process.dto.RemoteExecutableSummary;
 import com.example.DynamicCode.process.entity.RemoteExecutable;
 import com.example.DynamicCode.process.repository.RemoteExecutableRepository;
+import com.example.DynamicCode.shared.persistence.DataBaseProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -10,15 +11,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RemoteExecutableService implements DataBaseProvider<RemoteExecutable> {
 
-
-
     private final RemoteExecutableRepository remoteExecutableRepository;
+
+    public boolean hasSafeName(RemoteExecutable executable) {
+        return ExecutableFileNameRule.isSafe(executable.getName());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<RemoteExecutable> findExecutable(Long id) {
+        return remoteExecutableRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RemoteExecutableSummary> getSummaries() {
+        return remoteExecutableRepository.findAllSummaries();
+    }
 
     @Transactional
     public String saveAllExecutablesToDb(List<RemoteExecutable> executablesFromRequest) {

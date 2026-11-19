@@ -1,111 +1,94 @@
-import { useState, useCallback, useRef } from 'react';
-import { LanguageType, UploadState } from '../model/RemoteExecutable';
-import { remoteExecutableRepository } from '../model/remoteExecutableRepository';
+import { useCallback, useRef, useState } from 'react';
+import { errorMessage } from '@/shared/errorMessage';
+import { LanguageType } from '../model/RemoteExecutable';
+import type { UploadState } from '../model/RemoteExecutable';
+import { uploadStoredFile } from '../api/remoteExecutableApi';
 
-const INITIAL_STATE: UploadState = {
-  status: 'idle',
-  progress: 0,
-  message: null,
-  uploadedFile: null,
+export const DESCRIPTION_MAX_LENGTH = 200;
+
+const INITIAL_STATE: UploadState = { status: 'idle', progress: 0, message: null, uploadedFile: null };
+
+const LANGUAGE_BY_EXTENSION: Record<string, LanguageType> = {
+  java: LanguageType.JAVA,
+  py: LanguageType.PYTHON,
+  cpp: LanguageType.CPP,
+  cc: LanguageType.CPP,
+  cxx: LanguageType.CPP,
+  sh: LanguageType.BASH,
 };
 
-export const useUploadViewModel = () => {
-  const [selectedFile, setSelectedFile]         = useState<File | null>(null);
+const languageOf = (fileName: string): LanguageType => {
+  const extension = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase() : '';
+  return LANGUAGE_BY_EXTENSION[extension] ?? LanguageType.UNKNOWN;
+};
+
+const useFilePicking = (onPick: (file: File) => void) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) onPick(file);
+  }, [onPick]);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); }, []);
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
+  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onPick(file);
+  }, [onPick]);
+  const openFilePicker = useCallback(() => fileInputRef.current?.click(), []);
+  const clearInput = useCallback(() => { if (fileInputRef.current) fileInputRef.current.value = ''; }, []);
+
+  return { isDragging, fileInputRef, handleDrop, handleDragOver, handleDragLeave, handleFileInputChange, openFilePicker, clearInput };
+};
+
+const useStoredUploadForm = () => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageType>(LanguageType.UNKNOWN);
-  const [uploadState, setUploadState]           = useState<UploadState>(INITIAL_STATE);
-  const [isDragging, setIsDragging]             = useState(false);
-  const fileInputRef                            = useRef<HTMLInputElement>(null);
+  const [description, setDescriptionValue] = useState('');
+  const [uploadState, setUploadState] = useState<UploadState>(INITIAL_STATE);
 
   const selectFile = useCallback((file: File) => {
     setSelectedFile(file);
+    setSelectedLanguage(languageOf(file.name));
     setUploadState(INITIAL_STATE);
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) selectFile(file);
-    },
-    [selectFile]
-  );
+  const setDescription = useCallback((value: string) => setDescriptionValue(value.slice(0, DESCRIPTION_MAX_LENGTH)), []);
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
+  return { selectedFile, setSelectedFile, selectedLanguage, setSelectedLanguage, description, setDescription, uploadState, setUploadState, selectFile };
+};
 
-  const handleDragLeave = useCallback(() => setIsDragging(false), []);
-
-  const handleFileInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) selectFile(file);
-    },
-    [selectFile]
-  );
-
-  const openFilePicker = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+export const useUploadViewModel = () => {
+  const form = useStoredUploadForm();
+  const picking = useFilePicking(form.selectFile);
+  const { selectedFile, selectedLanguage, description, setUploadState, setSelectedFile, setDescription } = form;
+  const { clearInput } = picking;
 
   const upload = useCallback(async () => {
     if (!selectedFile) return;
-
     setUploadState({ status: 'uploading', progress: 0, message: null, uploadedFile: null });
-
     try {
-      const result = await remoteExecutableRepository.upload(
-        selectedFile,
-        selectedLanguage,
-        (progress) => setUploadState((prev) => ({ ...prev, progress }))
-      );
-
-      if (result.success) {
-        setUploadState({
-          status: 'success',
-          progress: 100,
-          message: result.message,
-          uploadedFile: result.data ?? null,
-        });
-      } else {
-        setUploadState({
-          status: 'error',
-          progress: 0,
-          message: result.message,
-          uploadedFile: null,
-        });
-      }
-    } catch (err) {
-      setUploadState({
-        status: 'error',
-        progress: 0,
-        message: err instanceof Error ? err.message : 'Nieznany błąd.',
-        uploadedFile: null,
-      });
+      const message = await uploadStoredFile({ file: selectedFile, language: selectedLanguage, description },
+        (progress) => setUploadState((prev) => ({ ...prev, progress })));
+      setUploadState({ status: 'success', progress: 100, message, uploadedFile: { name: selectedFile.name, language: selectedLanguage } });
+    } catch (err: unknown) {
+      setUploadState({ status: 'error', progress: 0, message: errorMessage(err, 'Nie udało się przesłać pliku.'), uploadedFile: null });
     }
-  }, [selectedFile, selectedLanguage]);
+  }, [selectedFile, selectedLanguage, description, setUploadState]);
 
   const reset = useCallback(() => {
     setSelectedFile(null);
+    setDescription('');
     setUploadState(INITIAL_STATE);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
+    clearInput();
+  }, [setSelectedFile, setDescription, setUploadState, clearInput]);
 
   return {
-    selectedFile,
-    selectedLanguage,
-    setSelectedLanguage,
-    uploadState,
-    isDragging,
-    fileInputRef,
-    handleDrop,
-    handleDragOver,
-    handleDragLeave,
-    handleFileInputChange,
-    openFilePicker,
-    upload,
-    reset,
+    selectedFile, selectedLanguage, setSelectedLanguage: form.setSelectedLanguage, description, setDescription,
+    uploadState: form.uploadState, ...picking, upload, reset,
   };
 };

@@ -1,4 +1,4 @@
-import { getServerId } from '../model/DeployState';
+import { getServerId } from '../viewmodel/deployRules';
 import type { DeployServer } from '../model/DeployState';
 import type { DeployViewModel } from '../viewmodel/useDeployViewModel';
 import { AddServerModal } from './AddServerModal';
