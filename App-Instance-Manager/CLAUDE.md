@@ -93,7 +93,7 @@ their feature's `service/`; their generic interface `DataBaseProvider<T>` is in
 | From | May import |
 |---|---|
 | any feature | `shared.**` |
-| `deploy` | `code.entity.{SourceCode,CompiledCode}`, `code.enums.LanguageType`, `code.service.{SourceCodeService,CompiledCodeService}`, `process.entity.RemoteExecutable`, `process.service.RemoteExecutableService` (upload strategies need the files to send), `code.service.LanguageProcess` (nmap, ADR-008) |
+| `deploy` | `code.entity.{SourceCode,CompiledCode}`, `code.enums.LanguageType`, `code.service.{SourceCodeService,CompiledCodeService}`, `process.entity.RemoteExecutable`, `process.service.RemoteExecutableService` (upload strategies need the files to send), `code.service.LanguageProcess` (nmap, ADR-008), `code.dto.CompiledFileCount`, `process.dto.RemoteExecutableSummary` (deployable files, ADR-016) |
 | `process` | `code.enums.LanguageType` |
 | `legacy` | anything (frozen) |
 | `code` | nothing from other features |

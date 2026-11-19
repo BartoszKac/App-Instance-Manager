@@ -1,4 +1,4 @@
-import { STRATEGY_LABEL, getServerId } from '../model/DeployState';
+import { STRATEGY_LABEL, getServerId } from '../viewmodel/deployRules';
 import type { DeployFile, DeployServer } from '../model/DeployState';
 import type { DeployViewModel } from '../viewmodel/useDeployViewModel';
 import { langClass } from '@/shared/lang';

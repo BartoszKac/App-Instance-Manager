@@ -40,7 +40,7 @@ Disk: ./app/<uuid>/   one folder per saved project (sources + compiled output)
 | `SourceFolderInTheDisk` / `CompiledFolderInTheDisk` | file | Mapping project → folder under `app/` |
 | `RemoteSerwerConfiguration` | deploy | SSH server: name, ip, user, **pass (plain text)**, OS |
 | `RemoteProgramConfiguration` | deploy | A program deployed to a server |
-| `RemoteExecutable` | process | Uploaded binary/script bytes + language |
+| `RemoteExecutable` | process | Uploaded binary/script bytes + language; nullable `description` (≤ 200), `sizeBytes`, `uploadedAt` set on upload (task 10) |
 | `ManagedService` | catalog | Service kept by the user: name, host, port, description |
 
 "Project" is not an entity: it is the set of `SourceCode` rows sharing `idManClass`.
@@ -56,7 +56,9 @@ Disk: ./app/<uuid>/   one folder per saved project (sources + compiled output)
 **Deploy**
 `POST /api/deploy/server` registers a server → `POST /api/deploy/transfer/bulk` with
 `TransferTask{mainClassId, configurationId, uploadStrategyType}` → `FileUploadStrategyFactory`
-picks `SourceCode`/`CompiledCode`/`RemoteExecutable` upload strategy → SFTP via JSch.
+picks `SourceCode`/`CompiledCode`/`RemoteExecutable` upload strategy, which returns raw bytes per file name (source as
+UTF-8) → SFTP via JSch → `RemoteProgramConfiguration` saved only on success → `TransferResult[]`, one per task. Screen
+Wysyłka lists files from `GET /api/deploy/deployable-files`; screen Uruchom uses the same list to name the file of each card.
 
 **Remote execute**
 `POST /api/deploy/program/execute` with `{command, programConfigId}` → `ExecutionService` runs the
@@ -105,7 +107,8 @@ Each feature folder follows MVVM: `model/`, `viewmodel(s)/`, `views/`, `componen
 | Network scan | `POST /api/deploy/network/scan` starts nmap on a subnet from the backend's own cards or server config only (ADR-008, ADR-009, ADR-012); timeouts, limited concurrency, CORS limited to `localhost:5173`; nmap has `cap_net_raw` in the image | Reveals devices and service versions on the LAN to anyone reaching port 8888; non-browser clients are not limited by CORS; code run in the container can use nmap's raw sockets |
 | Inspection | Logs in automatically to every server saved with a password; fixed read-only scripts, no `sudo`, no file contents; host keys pinned on first use (ADR-014) | Full listing of file names, accounts and packages of each server is readable by anyone reaching port 8888; passwords cross the internal gRPC network unencrypted |
 | Direct upload | Writes client files to any path the stored SSH account can write, SFTP only, paths validated in the inspector, no overwrite by default (ADR-015) | Anyone reaching port 8888 can place or, with `overwrite`, replace files on registered servers |
-| File names | Validated in `FileService` (`[A-Za-z0-9_-][A-Za-z0-9_.-]*`, resolved path must stay in the project folder); invalid → `400` | Mitigated for `POST /api/code/source`; legacy and upload endpoints not reviewed |
+| File names | Projects: validated in `FileService` (`[A-Za-z0-9_-][A-Za-z0-9_.-]*`, resolved path must stay in the project folder); invalid → `400`. Uploads: `ExecutableFileNameRule` on `/api/process/upload`, `/bulk`, `PUT /{id}` (no `/`, `\`, control characters, `.`/`..`, leading `-`) → `400`; a stored upload with an unsafe name fails its transfer instead of being written to `<dir>/<name>` over SFTP (task 09) | Rows of `source_code` saved before `FileService` validation are not re-checked at transfer; legacy endpoints not reviewed |
+| Run presets | Screen Uruchom fills commands that contain a file name; every such name is single-quoted with `shellQuote` before it reaches `cd <path> && <command>` on the server. `chmod` is a preset the user picks, never automatic (ADR-017) | The command itself is still free text by design (Remote execute row) |
 
 ## 7. Known technical debt
 

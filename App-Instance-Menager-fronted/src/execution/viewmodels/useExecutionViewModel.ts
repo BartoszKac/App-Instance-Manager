@@ -1,22 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { DeployedInstance, ProgramConfig, ServerConfig, TerminalLine } from '../model/Executionmodel';
-import { mkLine, mapConfigToInstance } from '../model/Executionmodel';
+import { useCallback, useEffect, useState } from 'react';
 import { errorMessage } from '@/shared/errorMessage';
+import { fetchDeployableFiles } from '@/shared/deployable/deployableFilesApi';
+import { executeCommand as postCommand, fetchPrograms, fetchServers } from '../api/executionApi';
+import type { DeployedInstance, TerminalLine } from '../model/Executionmodel';
+import { mapConfigToInstance } from './instances';
 
-const BASE = 'http://localhost:8888/api/deploy';
-
-const fetchJson = async <T,>(path: string): Promise<T> => {
-  const res = await fetch(`${BASE}${path}`);
-  if (!res.ok) throw new Error(`${path} HTTP ${res.status}`);
-  return res.json() as Promise<T>;
-};
+let nextLineId = 0;
+const mkLine = (text: string, type: TerminalLine['type']): TerminalLine => ({ id: nextLineId++, text, type });
 
 const loadInstances = async (): Promise<DeployedInstance[]> => {
-  const [programs, servers] = await Promise.all([
-    fetchJson<ProgramConfig[]>('/programs'),
-    fetchJson<ServerConfig[]>('/servers'),
-  ]);
-  return programs.map(cfg => mapConfigToInstance(cfg, servers));
+  const [programs, servers, files] = await Promise.all([fetchPrograms(), fetchServers(), fetchDeployableFiles()]);
+  return programs.map((cfg) => mapConfigToInstance(cfg, servers, files));
 };
 
 const parseOutputLines = (text: string): string[] => {
@@ -28,34 +22,25 @@ const parseOutputLines = (text: string): string[] => {
   }
 };
 
-const postCommand = async (command: string, programConfigId: number): Promise<string[]> => {
-  const res = await fetch(`${BASE}/program/execute`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command, programConfigId }),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Error (${res.status}): ${text || res.statusText}`);
-  return parseOutputLines(text);
-};
-
-export const useExecutionViewModel = () => {
-  const [instances, setInstances]         = useState<DeployedInstance[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState<string | null>(null);
+const useTerminal = () => {
   const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([
     mkLine('Tu pojawi się wynik komend uruchamianych na serwerach.', 'info'),
   ]);
-
   const pushLine = useCallback((text: string, type: TerminalLine['type']) => {
-    setTerminalLines(prev => [...prev, mkLine(text, type)]);
+    setTerminalLines((prev) => [...prev, mkLine(text, type)]);
   }, []);
+  const clearTerminal = useCallback(() => setTerminalLines([]), []);
+  return { terminalLines, pushLine, clearTerminal };
+};
+
+const useInstances = (pushLine: (text: string, type: TerminalLine['type']) => void) => {
+  const [instances, setInstances] = useState<DeployedInstance[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const applyLoad = useCallback((load: Promise<DeployedInstance[]>) =>
     load
-      .then(list => {
-        setInstances(list);
-      })
+      .then(setInstances)
       .catch((err: unknown) => {
         const msg = errorMessage(err);
         setError(msg);
@@ -70,25 +55,25 @@ export const useExecutionViewModel = () => {
     return applyLoad(loadInstances());
   }, [applyLoad, pushLine]);
 
-  useEffect(() => {
-    void applyLoad(loadInstances());
-  }, [applyLoad]);
+  useEffect(() => { void applyLoad(loadInstances()); }, [applyLoad]);
+
+  return { instances, loading, error, fetchInstances };
+};
+
+export const useExecutionViewModel = () => {
+  const { terminalLines, pushLine, clearTerminal } = useTerminal();
+  const { instances, loading, error, fetchInstances } = useInstances(pushLine);
 
   const executeCommand = useCallback(async (idConfiguration: number, command: string) => {
     if (!command.trim()) return;
     const ts = new Date().toLocaleTimeString('pl-PL', { hour12: false });
     pushLine(`[${ts}] $ ${command}`, 'command');
     try {
-      const lines = await postCommand(command, idConfiguration);
-      lines.forEach(line => pushLine(line, 'success'));
+      parseOutputLines(await postCommand(command, idConfiguration)).forEach((line) => pushLine(line, 'success'));
     } catch (err: unknown) {
       pushLine(errorMessage(err), 'error');
     }
   }, [pushLine]);
-
-  const clearTerminal = useCallback(() => {
-    setTerminalLines([]);
-  }, []);
 
   return { instances, loading, error, terminalLines, executeCommand, fetchInstances, clearTerminal };
 };

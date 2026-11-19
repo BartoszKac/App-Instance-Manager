@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Runtime data (H2 DB + backups) ###
+/data/*.db
+/data/*.db.bak*
+/data/*.trace.db

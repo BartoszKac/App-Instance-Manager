@@ -1,12 +1,12 @@
 package com.example.DynamicCode.deploy.service;
 
-import com.example.DynamicCode.deploy.enums.UploadStrategyType;
-import com.example.DynamicCode.deploy.service.RemoteProgramService;
-import com.example.DynamicCode.deploy.service.RemoteSerwerService;
+import com.example.DynamicCode.deploy.dto.TransferResult;
 import com.example.DynamicCode.deploy.dto.TransferTask;
 import com.example.DynamicCode.deploy.entity.RemoteProgramConfiguration;
 import com.example.DynamicCode.deploy.entity.RemoteSerwerConfiguration;
-import com.example.DynamicCode.deploy.service.RemoteDirectoryService;
+import com.example.DynamicCode.deploy.enums.UploadStrategyType;
+import com.example.DynamicCode.deploy.exception.RemoteWriteException;
+import com.example.DynamicCode.deploy.exception.SshConnectionException;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.SftpException;
 import lombok.RequiredArgsConstructor;
@@ -25,70 +25,49 @@ public class EnviromentTransferService {
     private final RemoteSerwerService remoteSerwerService;
     private final RemoteProgramService remoteProgramService;
 
-    public void initiateUpload(List<TransferTask> transferTaskList) {
-        if (transferTaskList == null || transferTaskList.isEmpty()) {
-            log.warn("Lista zadań transferu jest pusta.");
-            return;
+    public List<TransferResult> initiateUpload(List<TransferTask> transferTaskList) {
+        if (transferTaskList == null) {
+            return List.of();
         }
-
-        log.info("Rozpoczynam przetwarzanie {} zadań transferu...", transferTaskList.size());
-
-        for (TransferTask task : transferTaskList) {
-            processSingleTask(task);
-        }
-
-        log.info("Zakończono przetwarzanie listy transferów.");
-    }
-
-    private void processSingleTask(TransferTask task) {
-        try {
-            log.info("Uruchamiam transfer dla klasy: {}, konfiguracji: {}, strategii: {}",
-                    task.mainClassId(), task.configurationId(), task.uploadStrategyType());
-
-            transferEnvironment(task.mainClassId(), task.configurationId(), task.uploadStrategyType());
-
-            log.info("Transfer dla klasy {} zakończony sukcesem.", task.mainClassId());
-        } catch (Exception e) {
-            log.error("Błąd podczas transferu dla konfiguracji o ID: {}. Powód: {}",
-                    task.configurationId(), e.getMessage(), e);
-        }
+        return transferTaskList.stream().map(this::processSingleTask).toList();
     }
 
     public void transferEnvironment(Long mainClassId, Long idConfiguration, UploadStrategyType uploadStrategyType) {
-        RemoteSerwerConfiguration remoteSerwerConfiguration = remoteSerwerService.getConfigById(idConfiguration);
-
-        String remotePath = remoteDirectoryService.getRemoteDirectoryPath(remoteSerwerConfiguration.getOperationSystem());
-        System.out.println("Zdalna ścieżka docelowa dla uploadu: " + remotePath);
-        saveProgramConfiguration(mainClassId, idConfiguration,  uploadStrategyType, remotePath);
-
-        executeSshUpload(mainClassId, remoteSerwerConfiguration, uploadStrategyType, remotePath);
+        RemoteSerwerConfiguration server = remoteSerwerService.getConfigById(idConfiguration);
+        String remotePath = remoteDirectoryService.getRemoteDirectoryPath(server.getOperationSystem());
+        RemoteTarget target = new RemoteTarget(server.getIp(), server.getUser(), server.getPass(), remotePath);
+        executeSshUpload(target, uploadStrategyType, mainClassId);
+        saveProgramConfiguration(new TransferTask(mainClassId, idConfiguration, uploadStrategyType), remotePath);
     }
 
-    private void saveProgramConfiguration(Long mainClassId, Long idConfiguration,  UploadStrategyType uploadStrategyType, String remotePath) {
-        RemoteProgramConfiguration remoteProgramConfiguration = RemoteProgramConfiguration.builder()
-                .idSerwer(idConfiguration)
-                .uploadStrategyType(uploadStrategyType)
-                .idCode(mainClassId)
+    private TransferResult processSingleTask(TransferTask task) {
+        try {
+            transferEnvironment(task.mainClassId(), task.configurationId(), task.uploadStrategyType());
+            return new TransferResult(task.mainClassId(), task.configurationId(), true, TransferFailureMessages.SENT);
+        } catch (RuntimeException e) {
+            log.warn("Transfer of id {} with strategy {} to server {} failed",
+                    task.mainClassId(), task.uploadStrategyType(), task.configurationId(), e);
+            return new TransferResult(task.mainClassId(), task.configurationId(), false, TransferFailureMessages.messageFor(e));
+        }
+    }
+
+    private void saveProgramConfiguration(TransferTask task, String remotePath) {
+        RemoteProgramConfiguration configuration = RemoteProgramConfiguration.builder()
+                .idSerwer(task.configurationId())
+                .uploadStrategyType(task.uploadStrategyType())
+                .idCode(task.mainClassId())
                 .pathInServer(remotePath)
                 .build();
-
-        remoteProgramService.saveAllConfigurationsToDb(List.of(remoteProgramConfiguration));
+        remoteProgramService.saveAllConfigurationsToDb(List.of(configuration));
     }
 
-    private void executeSshUpload(Long mainClassId, RemoteSerwerConfiguration remoteSerwerConfiguration, UploadStrategyType uploadStrategyType, String remotePath) {
+    private void executeSshUpload(RemoteTarget target, UploadStrategyType uploadStrategyType, Long mainClassId) {
         try {
-            sshFileTransferService.uploadWithStrategy(
-                    remoteSerwerConfiguration.getIp(),
-                    remoteSerwerConfiguration.getUser(),
-                    remoteSerwerConfiguration.getPass(),
-                    remotePath,
-                    uploadStrategyType,
-                    mainClassId
-            );
+            sshFileTransferService.uploadWithStrategy(target, uploadStrategyType, mainClassId);
         } catch (JSchException e) {
-            throw new RuntimeException("Błąd protokołu SSH podczas transferu", e);
+            throw new SshConnectionException(e);
         } catch (SftpException e) {
-            throw new RuntimeException("Błąd protokołu SFTP podczas przesyłania pliku", e);
+            throw new RemoteWriteException(e);
         }
     }
 }

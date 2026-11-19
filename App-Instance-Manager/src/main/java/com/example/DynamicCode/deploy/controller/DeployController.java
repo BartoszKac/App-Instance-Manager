@@ -1,19 +1,27 @@
 package com.example.DynamicCode.deploy.controller;
 
-import com.example.DynamicCode.deploy.enums.UploadStrategyType;
+import com.example.DynamicCode.deploy.dto.DeployableFilesResponse;
 import com.example.DynamicCode.deploy.dto.ExecuteDto;
+import com.example.DynamicCode.deploy.dto.TransferResult;
 import com.example.DynamicCode.deploy.dto.TransferTask;
+import com.example.DynamicCode.deploy.entity.RemoteProgramConfiguration;
 import com.example.DynamicCode.deploy.entity.RemoteSerwerConfiguration;
-import com.example.DynamicCode.deploy.entity.RemoteProgramConfiguration; // Upewnij się, że pakiet jest poprawny
+import com.example.DynamicCode.deploy.enums.UploadStrategyType;
 import com.example.DynamicCode.deploy.service.ProviderDeployService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/deploy")
 @RequiredArgsConstructor
@@ -22,11 +30,8 @@ public class DeployController {
 
     private final ProviderDeployService providerDeployService;
 
-    // --- SERWERY ---
-
     @GetMapping("/servers")
     public ResponseEntity<List<RemoteSerwerConfiguration>> getAllServerConfigurations() {
-        log.info("[Provider-Deploy] Pobieranie wszystkich konfiguracji serwerów z bazy danych.");
         return ResponseEntity.ok(providerDeployService.getAllServerConfigurations());
     }
 
@@ -45,11 +50,6 @@ public class DeployController {
     public ResponseEntity<RemoteSerwerConfiguration> getServerConfig(@PathVariable Long idConfiguration) {
         return ResponseEntity.ok(providerDeployService.getServerConfiguration(idConfiguration));
     }
-//
-//    @PutMapping("/server")
-//    public ResponseEntity<RemoteSerwerConfiguration> updateServerConfig(@RequestBody RemoteSerwerConfiguration updatedConfig) {
-//        return ResponseEntity.ok(providerDeployService.updateServerConfiguration(updatedConfig));
-//    }
 
     @DeleteMapping("/server/{idConfiguration}")
     public ResponseEntity<Void> removeServerConfig(@PathVariable Long idConfiguration) {
@@ -57,31 +57,29 @@ public class DeployController {
         return ResponseEntity.noContent().build();
     }
 
-    // --- PROGRAMY ---
-
-    @GetMapping("/program/{mainClassId}")
-    public ResponseEntity<RemoteProgramConfiguration> getProgramConfiguration(@PathVariable Long mainClassId) {
-        log.info("[API-Deploy] Zapytanie HTTP GET o konfigurację programu dla MainClassId: {}", mainClassId);
-        return ResponseEntity.ok(providerDeployService.getProgramConfiguration(mainClassId));
+    @GetMapping("/deployable-files")
+    public DeployableFilesResponse getDeployableFiles() {
+        return providerDeployService.getDeployableFiles();
     }
-    // 3 ekran
+
+    @GetMapping("/program/{idConfiguration}")
+    public ResponseEntity<RemoteProgramConfiguration> getProgramConfiguration(@PathVariable Long idConfiguration) {
+        return ResponseEntity.ok(providerDeployService.getProgramConfiguration(idConfiguration));
+    }
+
     @GetMapping("/programs")
     public ResponseEntity<List<RemoteProgramConfiguration>> getAllConfigurations() {
-        log.info("[API-Deploy] Zapytanie HTTP GET o wszystkie konfiguracje programów.");
         return ResponseEntity.ok(providerDeployService.getAllConfigurations());
     }
+
     @PostMapping("/program/execute")
     public ResponseEntity<String> executeProgramOnRemoteServer(@RequestBody ExecuteDto dto) {
-        String result = providerDeployService.executeProgramOnRemoteServer(dto.getCommand(), dto.getProgramConfigId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(providerDeployService.executeProgramOnRemoteServer(dto.getCommand(), dto.getProgramConfigId()));
     }
-    /// koniec 3 ekranu
 
-    // --- TRANSFERY / WDROŻENIA ---
     @PostMapping("/transfer/bulk")
-    public ResponseEntity<Void> executeBulkTransfer(@RequestBody List<TransferTask> tasks) {
-        providerDeployService.executeEnvironmentUploads(tasks);
-        return ResponseEntity.ok().build();
+    public List<TransferResult> executeBulkTransfer(@RequestBody List<TransferTask> tasks) {
+        return providerDeployService.executeEnvironmentUploads(tasks);
     }
 
     @PostMapping("/transfer/single")

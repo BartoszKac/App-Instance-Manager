@@ -1,8 +1,9 @@
 import { LanguageType } from '../model/RemoteExecutable';
 import type { UploadState } from '../model/RemoteExecutable';
-import { useUploadViewModel } from '../viewmodel/useUploadViewModel';
+import { DESCRIPTION_MAX_LENGTH, useUploadViewModel } from '../viewmodel/useUploadViewModel';
 import { Icon } from '@/shared/ui/Icon';
 import { Notice, Spinner } from '@/shared/ui/atoms';
+import { formatBytes } from '@/shared/format';
 
 type UploadViewModel = Omit<ReturnType<typeof useUploadViewModel>, 'fileInputRef'>;
 
@@ -14,7 +15,6 @@ const KINDS: { value: LanguageType; label: string }[] = [
   { value: LanguageType.UNKNOWN, label: 'Inny' },
 ];
 
-const formatSize = (bytes: number) => (bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
 
 const Result = ({ state }: { state: UploadState }) => {
   if (state.status === 'success') return <Notice tone="ok"><Icon name="check" />{state.message ?? 'Plik przesłany. Znajdziesz go w kroku Wysyłka.'}</Notice>;
@@ -26,7 +26,7 @@ const SelectedFile = ({ vm, file }: { vm: UploadViewModel; file: File }) => (
   <div className="dropzone__file">
     <Icon name="file" size={28} />
     <span className="dropzone__name">{file.name}</span>
-    <span className="dropzone__size">{formatSize(file.size)}</span>
+    <span className="dropzone__size">{formatBytes(file.size)}</span>
     <button className="btn btn--ghost btn--sm" onClick={() => { vm.reset(); vm.openFilePicker(); }} disabled={vm.uploadState.status === 'uploading'}>Zmień plik</button>
   </div>
 );
@@ -42,6 +42,21 @@ const Dropzone = ({ vm, inputRef }: { vm: UploadViewModel; inputRef: React.RefOb
       </button>
     )}
   </div>
+);
+
+const DescriptionField = ({ vm }: { vm: UploadViewModel }) => (
+  <label className="field">
+    <span className="field__label">Do czego służy</span>
+    <input
+      className="input"
+      value={vm.description}
+      maxLength={DESCRIPTION_MAX_LENGTH}
+      placeholder="Na przykład: kopia zapasowa bazy, uruchamiana co noc"
+      disabled={vm.uploadState.status === 'uploading'}
+      onChange={(e) => vm.setDescription(e.target.value)}
+    />
+    <span className="field__hint">Opcjonalnie. {vm.description.length} z {DESCRIPTION_MAX_LENGTH} znaków.</span>
+  </label>
 );
 
 const KindPicker = ({ vm }: { vm: UploadViewModel }) => (
@@ -71,6 +86,7 @@ export const StoredUpload = () => {
   return (
     <>
       <Dropzone vm={vm} inputRef={fileInputRef} />
+      <DescriptionField vm={vm} />
       <KindPicker vm={vm} />
       {vm.uploadState.status === 'uploading' && (
         <div className="progress" role="progressbar" aria-valuenow={vm.uploadState.progress} aria-valuemin={0} aria-valuemax={100} aria-label="Postęp przesyłania">

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { apiFetch } from '@/shared/http';
-import { EMPTY_NEW_SERVER, getServerId } from '../model/DeployState';
+import { EMPTY_NEW_SERVER, getServerId } from './deployRules';
 import type { DeployServer, NewServerForm } from '../model/DeployState';
 
 const toggledId = (set: Set<number>, id: number) => {

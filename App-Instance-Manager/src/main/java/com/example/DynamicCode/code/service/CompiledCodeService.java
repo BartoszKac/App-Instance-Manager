@@ -1,8 +1,9 @@
 package com.example.DynamicCode.code.service;
 
+import com.example.DynamicCode.code.dto.CompiledFileCount;
 import com.example.DynamicCode.shared.persistence.DataBaseProvider;
-import com.example.DynamicCode.code.entity.CompiledCode; // Zmiana na poprawną encję
-import com.example.DynamicCode.code.repository.CompiledCodeRepository; // Zakładam taką nazwę repozytorium dla CompiledCode
+import com.example.DynamicCode.code.entity.CompiledCode;
+import com.example.DynamicCode.code.repository.CompiledCodeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,11 @@ import java.util.List;
 public class CompiledCodeService implements DataBaseProvider<CompiledCode> {
 
     private final CompiledCodeRepository compiledCodeRepository;
+
+    @Transactional(readOnly = true)
+    public List<CompiledFileCount> countFilesPerProject() {
+        return compiledCodeRepository.countFilesPerProject();
+    }
 
     @Transactional
     public String saveAllFilesToDb(List<CompiledCode> codesFromRequest) {
